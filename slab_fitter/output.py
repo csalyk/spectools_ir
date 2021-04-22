@@ -2,7 +2,8 @@ import numpy as np
 from astropy.io import fits
 from astropy.constants import c,h, k_B, G, M_sun, au, pc, u
 import pickle as pickle
-from .helpers import extract_hitran_data,line_ids_from_flux_calculator,line_ids_from_hitran,get_global_identifier, translate_molecule_identifier, get_molmass
+from spectools_ir.utils import extract_hitran_data, get_global_identifier, translate_molecule_identifier, get_molmass
+from .helpers import line_ids_from_flux_calculator,line_ids_from_hitran
 import pdb as pdb
 from astropy.table import Table
 from astropy import units as un

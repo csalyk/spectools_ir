@@ -1,20 +1,20 @@
 import numpy as np
-from astropy.io import fits
-from astropy.constants import c,h, k_B, G, M_sun, au, pc, u
-import pickle as pickle
-from .helpers import extract_hitran_data,line_ids_from_flux_calculator,line_ids_from_hitran,get_global_identifier, translate_molecule_identifier, get_molmass, get_molecule_identifier
-import pdb as pdb
-from astropy.table import Table
-from astropy import units as un
-import os
 import urllib
 import emcee
 import pandas as pd
-from astropy.convolution import Gaussian1DKernel, convolve
 import json as json
 import time
 import pandas as pd
 import pkgutil
+
+from astropy.io import fits
+from astropy.constants import c,h, k_B, G, M_sun, au, pc, u
+from astropy.table import Table
+from astropy import units as un
+from astropy.convolution import Gaussian1DKernel, convolve
+
+from spectools_ir.utils import extract_hitran_data, get_global_identifier, translate_molecule_identifier, get_molecule_identifier, get_molmass
+from .helpers import line_ids_from_flux_calculator,line_ids_from_hitran
 
 def read_data_from_file(filename,vup=None,**kwargs):
     data=pd.read_csv(filename,sep=r"\s+")
