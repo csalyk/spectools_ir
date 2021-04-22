@@ -253,7 +253,7 @@ class LineData():
         mywn0=self.wn0
         y=np.log(self.lineflux/(mywn0*self.gup*self.aup))  #All mks, so wn in m^-1
         if(units=='cgs'):
-            y=np.log(1000.*self.lineflux/((self.wn0*1e-2)*self.gup*self.aup))
+            y=np.log(1000.*self.lineflux/((self.wn0*1e-2)*self.gup*self.aup))   #All cgs
         if(units=='mixed'):
             y=np.log(self.lineflux/((self.wn0*1e-2)*self.gup*self.aup))
         rot_dict={'x':x,'y':y,'units':units}
@@ -262,50 +262,7 @@ class LineData():
             if(units=='cgs'):
                 rot_dict['modely']=np.log(modelfluxes*1000./(self.wn0*1e-2*self.gup*self.aup))  #All cgs
             if(units=='mixed'):
-                rot_dict['modely']=np.log(modelfluxes/(self.wn0*1e-2*self.gup*self.aup))  #All cgs
+                rot_dict['modely']=np.log(modelfluxes/(self.wn0*1e-2*self.gup*self.aup))  #Mixed units
 
         return rot_dict
 #------------------------------------------------------------------------------------                                     
-#def make_rotation_diagram(lineparams,modelfluxes=None):
-#    '''
-#    Take ouput of make_spec and use it to compute rotation diagram parameters.
-#
-#    Parameters
-#    ---------
-#    lineparams: dictionary
-#        dictionary output from make_spec
-#
-#    Returns
-#    --------
-#    rot_table: astropy Table
-#        Table of x and y values for rotation diagram.  
-#
-#    '''
-#    x=lineparams['eup_k']
-#    y=np.log(lineparams['lineflux']/(lineparams['wn']*lineparams['gup']*lineparams['a']))
-#    rot_table = Table([x, y], names=('x', 'y'),  dtype=('f8', 'f8'))
-#    rot_table['x'].unit = 'K'        
-#
-#    if(modelfluxes is not None):
-#        rot_table['modely']=np.log(modelfluxes/(lineparams['wn']*lineparams['gup']*lineparams['a']))
-#
-#    return rot_table
-#---------------------
-#def get_hitran_from_flux_calculator(data,hitran_data):
-
-    #Define line_id_dictionary using hitran_data
-#    line_id_dict={}
-#    for i,myrow in enumerate(hitran_data):
-#        line_id_key=(str(myrow['molec_id'])+str(myrow['local_iso_id']) + str(myrow['Vp'])+str(myrow['Vpp'])+ str(myrow['Qp'])+str(myrow['Qpp'])).replace(" ","")
-#        line_id_dict[line_id_key]=i
-
-    #Get a set of line_ids using hitran_data and actual data
-#    line_ids=line_ids_from_flux_calculator(data, line_id_dict)
-
-    #Get appropriate partition function data (will need to fix to account for isotopologues, possibly different molecules)
-#    qdata = pd.read_csv('https://hitran.org/data/Q/q26.txt',sep=' ',skipinitialspace=True,names=['temp','q'],header=None)
-#
-#    hitran_dict={'qdata':qdata,'line_ids':line_ids,'hitran_data':hitran_data}
-
-#    return hitran_dict
-

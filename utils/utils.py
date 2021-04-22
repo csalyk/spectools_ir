@@ -5,6 +5,39 @@ from astropy.constants import c, k_B, h, u
 from molmass import Formula
 import pdb as pdb
 
+def make_rotation_diagram(lineparams, units='mks'):
+    '''                                                                                                     
+    Take ouput of make_spec and use it to compute rotation diagram parameters.                              
+                                                                                                            
+    Parameters                                                                                              
+    ---------                                                                                               
+    lineparams: dictionary                                                                                  
+        dictionary output from make_spec                                                                    
+                                                                                                            
+    Returns                                                                                                 
+    --------                                                                                                
+    rot_table: astropy Table                                                                                
+        Table of x and y values for rotation diagram.                                                       
+                                                                                                            
+    '''
+
+    if('gup' in lineparams.columns):
+        gup=lineparams['gup']
+
+    if('gp' in lineparams.columns):
+        gup=lineparams['gp']
+
+    x=lineparams['eup_k']
+    y=np.log(lineparams['lineflux']/(lineparams['wn']*1e2*gup*lineparams['a']))   #All mks
+    if(units=='cgs'):
+        y=np.log(1000.*lineparams['lineflux']/(lineparams['wn']*gup*lineparams['a'])) #All cgs
+    if(units=='mixed'):
+        y=np.log(lineparams['lineflux']/(lineparams['wn']*gup*lineparams['a'])) #Mixed units
+    rot_dict={'x':x,'y':y,'units':units}
+
+    return rot_dict
+
+
 def compute_thermal_velocity(molecule_name, temp):
     '''
     Compute the thermal velocity given a molecule name and temperature
