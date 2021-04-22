@@ -1,12 +1,14 @@
 import numpy as np
 import pandas as pd
-from .helpers import extract_hitran_data, extract_vup, line_fit, calc_linewidth, fwhm_to_sigma
-from .helpers import calc_line_flux_from_fit,strip_superfluous_hitran_data, convert_quantum_strings,calc_numerical_flux
 import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
+
 from astropy.constants import c
 from astropy.table import Table
-import pdb as pdb
-from scipy.interpolate import interp1d
+
+from spectools_ir.utils import extract_hitran_data, fwhm_to_sigma, sigma_to_fwhm
+from .helpers import _line_fit, _calc_linewidth, _calc_line_flux_from_fit
+from .helpers import _strip_superfluous_hitran_data, _convert_quantum_strings, _calc_numerical_flux
 
 def make_rotation_diagram(lineflux_data):
     '''                                                                                                 
@@ -74,8 +76,8 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
     '''
     if(vet_fits==True): 
         plot=True
-    lineflux_data=convert_quantum_strings(hitran_data)
-    lineflux_data=strip_superfluous_hitran_data(lineflux_data)
+    lineflux_data=_convert_quantum_strings(hitran_data)
+    lineflux_data=_strip_superfluous_hitran_data(lineflux_data)
 
     nlines=np.size(lineflux_data)
     #Add new columns to astropy table to hold line fluxes and error bars
@@ -104,19 +106,19 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
             print('Not enough data near ', w0+wdop, ' microns. Skipping.')
             goodfit_bool[i]=False
         if(len(myx) > 5):
-            g=line_fit(myx,myy,nterms=4,p0=[amp,w0+wdop,sig_w,cont])
+            g=_line_fit(myx,myy,nterms=4,p0=[amp,w0+wdop,sig_w,cont])
             if(g!=-1):   #curve fit succeeded
                 p=g['parameters']
                 perr=g['parameter_errors']
                 resid=g['resid']
                 sigflux=np.sqrt(np.mean(resid**2.))
-                (lineflux,lineflux_err)=calc_line_flux_from_fit(p,sigflux=sigflux)
+                (lineflux,lineflux_err)=_calc_line_flux_from_fit(p,sigflux=sigflux)
                 lineflux_data['lineflux_Gaussian'][i]=lineflux.value
                 lineflux_data['lineflux_err'][i]=lineflux_err.value
-                lineflux_num=calc_numerical_flux(myx,myy,p)
+                lineflux_num=_calc_numerical_flux(myx,myy,p)
                 lineflux_data['lineflux'][i]=lineflux_num.value
-                lineflux_data['linewidth'][i]=np.abs((calc_linewidth(p,perr=perr))[0].value)
-                lineflux_data['linewidth_err'][i]=np.abs((calc_linewidth(p,perr=perr))[1].value)
+                lineflux_data['linewidth'][i]=np.abs((_calc_linewidth(p,perr=perr))[0].value)
+                lineflux_data['linewidth_err'][i]=np.abs((_calc_linewidth(p,perr=perr))[1].value)
                 lineflux_data['v_dop_fit'][i]=(p[1]-w0)/w0*c.value*1e-3   #km/s
                 lineflux_data['v_dop_fit_err'][i]=(perr[1])/w0*c.value*1e-3   #km/s
                 lineflux_data['continuum'][i]=(p[3])   #Jy

@@ -4,9 +4,10 @@ from astropy import units as un
 from astropy.constants import c, k_B, h, u
 from astropy import units as un
 from scipy.optimize import curve_fit
+from spectools_ir.utils import fwhm_to_sigma, sigma_to_fwhm
 import pdb as pdb
 
-def convert_quantum_strings(hitran_data_in):
+def _convert_quantum_strings(hitran_data_in):
     '''
     Converts Vp, Vpp, Qp and Qpp quantum number strings to more useful format for analysis.
     Takes HITRAN values and saves them to new fields, e.g., 'Vp_HITRAN'
@@ -51,7 +52,7 @@ def convert_quantum_strings(hitran_data_in):
     return hitran_data     
 
 
-def strip_superfluous_hitran_data(hitran_data_in):
+def _strip_superfluous_hitran_data(hitran_data_in):
     '''
     Strips hitran_data astropy table of columns superfluous for IR astro spectroscopy
 
@@ -87,7 +88,7 @@ def strip_superfluous_hitran_data(hitran_data_in):
     return hitran_data        
 
 
-def calc_linewidth(p,perr=None):
+def _calc_linewidth(p,perr=None):
     '''
     Given Gaussian fit to Flux vs. wavelength in microns, find line width in km/s
    
@@ -108,22 +109,22 @@ def calc_linewidth(p,perr=None):
 
     return (linewidth, linewidth_err)
 
-def gauss3(x, a0, a1, a2):
+def _gauss3(x, a0, a1, a2):
     z = (x - a1) / a2
     y = a0 * np.exp(-z**2 / 2.)
     return y
 
-def gauss4(x, a0, a1, a2, a3):
+def _gauss4(x, a0, a1, a2, a3):
     z = (x - a1) / a2
     y = a0 * np.exp(-z**2 / 2.) + a3
     return y
 
-def gauss5(x, a0, a1, a2, a3, a4):
+def _gauss5(x, a0, a1, a2, a3, a4):
     z = (x - a1) / a2
     y = a0 * np.exp(-z**2 / 2.) + a3 + a4 * x
     return y
 
-def line_fit(wave,flux,nterms=4,p0=None,bounds=None):
+def _line_fit(wave,flux,nterms=4,p0=None,bounds=None):
     '''
     Take wave and flux values and perform a Gaussian fit
 
@@ -139,7 +140,7 @@ def line_fit(wave,flux,nterms=4,p0=None,bounds=None):
     linefit['parameters','yfit','resid'] : dictionary
        Dictionary containing fit parameters,fit values, and residual
     '''
-    options={5:gauss5, 4:gauss4, 3:gauss3}
+    options={5:_gauss5, 4:_gauss4, 3:_gauss3}
     fit_func=options[nterms]
     try:
         if(bounds is not None):
@@ -155,15 +156,7 @@ def line_fit(wave,flux,nterms=4,p0=None,bounds=None):
                "parameter_errors":perr}
     return fitoutput
 
-def extract_vup(hitran_data,vup_value):
-
-    vbool=[]
-    for myvp in hitran_data['Vp']:
-        vbool.append(np.int(myvp)==vup_value)  
-    out=hitran_data[vbool]
-    return out
-
-def calc_numerical_flux(myx,myy,pfit, sigflux=None):
+def _calc_numerical_flux(myx,myy,pfit, sigflux=None):
     '''
     Take parameters from line fit and compute a line flux and error
 
@@ -195,7 +188,7 @@ def calc_numerical_flux(myx,myy,pfit, sigflux=None):
     lineflux=np.nansum(myflux[mybool]*dwave)*1e-26*1e-6*nufit**2./c.value*un.W/un.m/un.m
     return lineflux
 
-def calc_line_flux_from_fit(pfit, sigflux=None):
+def _calc_line_flux_from_fit(pfit, sigflux=None):
     '''
     Take parameters from line fit and compute a line flux and error
 

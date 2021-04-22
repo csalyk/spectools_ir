@@ -105,7 +105,7 @@ def wn_to_k(wn):
     '''              
     return wn.to(1/un.m)*h*c/k_B
 
-def extract_hitran_data(molecule_name, wavemin, wavemax, isotopologue_number=1, eupmax=None, aupmin=None,swmin=None):
+def extract_hitran_data(molecule_name, wavemin, wavemax, isotopologue_number=1, eupmax=None, aupmin=None,swmin=None,vup=None):
     '''                                                               
     Extract data from HITRAN 
     Primarily makes use of astroquery.hitran, with some added functionality specific to common IR spectral applications
@@ -156,6 +156,7 @@ def extract_hitran_data(molecule_name, wavemin, wavemax, isotopologue_number=1, 
     ebool = np.full(np.size(tbl), True, dtype=bool)  #default to True
     abool = np.full(np.size(tbl), True, dtype=bool)  #default to True
     swbool = np.full(np.size(tbl), True, dtype=bool)  #default to True
+    vupbool = np.full(np.size(tbl), True, dtype=bool)  #default to True                                                            
     #Upper level energy
     if(eupmax is not None):
         ebool = tbl['eup_k'] < eupmax
@@ -165,8 +166,12 @@ def extract_hitran_data(molecule_name, wavemin, wavemax, isotopologue_number=1, 
     #Line strength
     if(swmin is not None):
         swbool = tbl['sw'] > swmin
-     #Combine
-    extractbool = (abool & ebool & swbool)
+   #Vup
+    if(vup is not None):
+        vupval = [np.int(val) for val in tbl['Vp']]
+        vupbool=(np.array(vupval)==vup)
+   #Combine
+    extractbool = (abool & ebool & swbool & vupbool)
     hitran_data=tbl[extractbool]
 
     #Return astropy table
@@ -296,3 +301,79 @@ def get_molecule_identifier(molecule_name):
     ## Invert the dictionary.                                                                                                          
     trans = {v:k for k,v in trans.items()}
     return(int(trans[molecule_name]))
+
+def spec_convol(wave, flux, dv):
+    '''                                                                                                             
+    Convolve a spectrum, given wavelength in microns and flux density, by a given FWHM in velocity                  
+                                                                                                                    
+    Parameters                                                                                                      
+    ---------                                                                                                       
+    wave : numpy array                                                                                              
+        wavelength values, in microns                                                                               
+    flux : numpy array                                                                                              
+        flux density values, in units of Energy/area/time/Hz                                                        
+    dv : float                                                                                                      
+        FWHM of convolution kernel, in km/s                                                                         
+                                                                                                                    
+    Returns                                                                                                         
+    --------                                                                                                        
+    newflux : numpy array                                                                                           
+        Convolved spectrum flux density values, in same units as input                                              
+                                                                                                                    
+    '''
+
+#Program assumes units of dv are km/s, and dv=FWHM                                                                 \
+                                                                                                                    
+
+    dv=fwhm_to_sigma(dv)
+    n=round(4.*dv/(c.value*1e-3)*np.median(wave)/(wave[1]-wave[0]))
+    if (n < 10):
+        n=10.
+
+#Pad arrays to deal with edges                                                                                     \
+
+    dwave=wave[1]-wave[0]
+    wave_low=np.arange(wave[0]-dwave*n, wave[0]-dwave, dwave)
+    wave_high=np.arange(np.max(wave)+dwave, np.max(wave)+dwave*(n-1.), dwave)
+    nlow=np.size(wave_low)
+    nhigh=np.size(wave_high)
+    flux_low=np.zeros(nlow)
+    flux_high=np.zeros(nhigh)
+    mask_low=np.zeros(nlow)
+    mask_high=np.zeros(nhigh)
+    mask_middle=np.ones(np.size(wave))
+    wave=np.concatenate([wave_low, wave, wave_high])
+    flux=np.concatenate([flux_low, flux, flux_high])
+    mask=np.concatenate([mask_low, mask_middle, mask_high])
+
+    newflux=np.copy(flux)
+
+    if( n > (np.size(wave)-n)):
+        print("Your wavelength range is too small for your kernel")
+        print("Program will return an empty array")
+
+    for i in np.arange(n, np.size(wave)-n+1):
+        lwave=wave[np.int(i-n):np.int(i+n+1)]
+        lflux=flux[np.int(i-n):np.int(i+n+1)]
+        lvel=(lwave-wave[np.int(i)])/wave[np.int(i)]*c.value*1e-3
+        nvel=(np.max(lvel)-np.min(lvel))/(dv*.2) +3
+        vel=np.arange(nvel)
+        vel=.2*dv*(vel-np.median(vel))
+        kernel=markgauss(vel,mean=0,sigma=dv,area=1.)
+        wkernel=np.interp(lvel,vel,kernel)   #numpy interp is almost factor of 2 faster than interp1d               
+        wkernel=wkernel/np.nansum(wkernel)
+        newflux[np.int(i)]=np.nansum(lflux*wkernel)/np.nansum(wkernel[np.isfinite(lflux)])
+        #Note: denominator is necessary to correctly account for NaN'd regions                                     \
+                                                                                                                    
+
+#Remove NaN'd regions                                                                                              \
+                                                                                                                    
+    nanbool=np.invert(np.isfinite(flux))   #Places where flux is not finite                                        \
+                                                                                                                    
+    newflux[nanbool]='NaN'
+
+#Now remove padding                                                                                                \
+                                                                                                                    
+    newflux=newflux[mask==1]
+
+    return newflux

@@ -1,17 +1,18 @@
 import numpy as np
-from astropy.io import fits
-from astropy.constants import c,h, k_B, G, M_sun, au, pc, u
-import pickle as pickle
-from .helpers import fwhm_to_sigma, sigma_to_fwhm, markgauss, compute_thermal_velocity, get_molecule_identifier, extract_hitran_data,get_global_identifier
-import pdb as pdb
-from astropy.table import Table
-from astropy import units as un
-import os
 import urllib
 import pandas as pd
+
+from astropy.table import Table
+from astropy import units as un
+from astropy.io import fits
+from astropy.constants import c,h, k_B, G, M_sun, au, pc, u
 from astropy.convolution import Gaussian1DKernel, convolve
 
-def spec_convol_klaus(wave,flux,R):
+from spectools_ir.utils import fwhm_to_sigma, sigma_to_fwhm, compute_thermal_velocity, extract_hitran_data
+from spectools_ir.utils import  get_molecule_identifier, get_global_identifier, spec_convol
+from spectools_ir.utils.utils import markgauss
+
+def _spec_convol_klaus(wave,flux,R):
     '''
     Convolve a spectrum, given wavelength in microns and flux density, by a given FWHM in velocity 
 
@@ -81,76 +82,6 @@ def spec_convol_klaus(wave,flux,R):
 
     return flux_oldsampling
 
-
-def spec_convol(wave, flux, dv):
-    '''
-    Convolve a spectrum, given wavelength in microns and flux density, by a given FWHM in velocity 
-
-    Parameters
-    ---------
-    wave : numpy array
-        wavelength values, in microns
-    flux : numpy array
-        flux density values, in units of Energy/area/time/Hz
-    dv : float
-        FWHM of convolution kernel, in km/s
-
-    Returns
-    --------
-    newflux : numpy array
-        Convolved spectrum flux density values, in same units as input
-
-    '''
-
-#Program assumes units of dv are km/s, and dv=FWHM                                                                        
-
-    dv=fwhm_to_sigma(dv)
-    n=round(4.*dv/(c.value*1e-3)*np.median(wave)/(wave[1]-wave[0]))
-    if (n < 10):
-        n=10.
-
-#Pad arrays to deal with edges                                                                                            
-    dwave=wave[1]-wave[0]
-    wave_low=np.arange(wave[0]-dwave*n, wave[0]-dwave, dwave)
-    wave_high=np.arange(np.max(wave)+dwave, np.max(wave)+dwave*(n-1.), dwave)
-    nlow=np.size(wave_low)
-    nhigh=np.size(wave_high)
-    flux_low=np.zeros(nlow)
-    flux_high=np.zeros(nhigh)
-    mask_low=np.zeros(nlow)
-    mask_high=np.zeros(nhigh)
-    mask_middle=np.ones(np.size(wave))
-    wave=np.concatenate([wave_low, wave, wave_high])
-    flux=np.concatenate([flux_low, flux, flux_high])
-    mask=np.concatenate([mask_low, mask_middle, mask_high])
-
-    newflux=np.copy(flux)
-
-    if( n > (np.size(wave)-n)):
-        print("Your wavelength range is too small for your kernel")
-        print("Program will return an empty array")
-
-    for i in np.arange(n, np.size(wave)-n+1):
-        lwave=wave[np.int(i-n):np.int(i+n+1)]
-        lflux=flux[np.int(i-n):np.int(i+n+1)]
-        lvel=(lwave-wave[np.int(i)])/wave[np.int(i)]*c.value*1e-3
-        nvel=(np.max(lvel)-np.min(lvel))/(dv*.2) +3
-        vel=np.arange(nvel)
-        vel=.2*dv*(vel-np.median(vel))
-        kernel=markgauss(vel,mean=0,sigma=dv,area=1.)
-        wkernel=np.interp(lvel,vel,kernel)   #numpy interp is almost factor of 2 faster than interp1d
-        wkernel=wkernel/np.nansum(wkernel)
-        newflux[np.int(i)]=np.nansum(lflux*wkernel)/np.nansum(wkernel[np.isfinite(lflux)])
-        #Note: denominator is necessary to correctly account for NaN'd regions                                            
-
-#Remove NaN'd regions                                                                                                     
-    nanbool=np.invert(np.isfinite(flux))   #Places where flux is not finite                                               
-    newflux[nanbool]='NaN'
-
-#Now remove padding                                                                                                       
-    newflux=newflux[mask==1]
-
-    return newflux
 
 #------------------------------------------------------------------------------------                                     
 def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, deltav=None, isotopologue_number=1, d_pc=1,
@@ -231,7 +162,7 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     gup=hitran_data['gp']
 
 #Compute partition function
-    q=compute_partition_function(molecule_name,temp,isot)
+    q=_compute_partition_function(molecule_name,temp,isot)
     
 #Begin calculations                                                                                                       
     afactor=((aup*gup*n_col)/(q*8.*np.pi*(wn0)**3.)) #mks                                                                 
@@ -318,7 +249,7 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     return slabdict
 
 
-def compute_partition_function(molecule_name,temp,isotopologue_number=1):
+def _compute_partition_function(molecule_name,temp,isotopologue_number=1):
     '''                                                                                                                                       
     For a given input molecule name, isotope number, and temperature, return the partition function Q
                                                                                                                                               
@@ -342,7 +273,6 @@ def compute_partition_function(molecule_name,temp,isotopologue_number=1):
     handle = urllib.request.urlopen(qurl)
     qdata = pd.read_csv(handle,sep=' ',skipinitialspace=True,names=['temp','q'],header=None)
 
-#May want to add code with local file access
 #    pathmod=os.path.dirname(__file__)
 #    if not os.path.exists(qfilename):  #download data from internet
        #get https://hitran.org/data/Q/qstr(G).txt
