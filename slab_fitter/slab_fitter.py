@@ -17,11 +17,26 @@ from spectools_ir.utils import extract_hitran_data, get_global_identifier, trans
 from .helpers import line_ids_from_flux_calculator,line_ids_from_hitran
 
 def read_data_from_file(filename,vup=None,**kwargs):
+    '''
+    Convenience function to find all HITRAN data for lines, given minimal inputs (local_iso_id, molec_id, lineflux, lineflux_err, wn or wave)
+    
+    Parameters
+    ----------
+    filename : str
+     Name of file containing line fluxes, isotope ids, molecular ids, and line flux errors    
+
+    Returns
+    ----------
+    data : pandas data frame
+     More complete pandas data frame containing HITRAN data in addition to input line fluxes    
+    '''
+
     data=pd.read_csv(filename,sep=r"\s+")
     data['local_iso_id'] = data.pop('iso')
     data['molec_id']=data['molec'].apply(get_molecule_identifier)
     data['lineflux_err']=data.pop('error')
 
+    if(('wave' in data.columns) and ('wn' not in data.columns)): data['wn']=1.e4/data.wave
 
     if not ('a' in data and 'gup' in data and 'elower' in data):
         wavemin=1e4/(np.max(data['wn'])+2)
@@ -188,7 +203,7 @@ class Retrieval():
         f_arr=np.zeros([nlines,nvel])     #nlines x nvel       
         lineflux=np.zeros(nlines)
 
-        for i in range(nlines):  #I might still be able to get rid of this loop
+        for i in range(nlines):  #Loop is time-consuming.  Maybe it can be removed somehow?
             f_arr[i,:]=2*h.value*c.value*wn0[i]**3./(np.exp(wnfactor[i])-1.0e0)*(1-np.exp(-tau[i,:]))*si2jy*omega
             lineflux_jykms=np.sum(f_arr[i,:])*dvel
             lineflux[i]=lineflux_jykms*1e-26*1.*1e5*(1./(w0[i]*1e-4))    #mks

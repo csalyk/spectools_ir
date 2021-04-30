@@ -10,7 +10,7 @@ from astropy.convolution import Gaussian1DKernel, convolve
 
 from spectools_ir.utils import fwhm_to_sigma, sigma_to_fwhm, compute_thermal_velocity, extract_hitran_data
 from spectools_ir.utils import  get_molecule_identifier, get_global_identifier, spec_convol
-from spectools_ir.utils.utils import markgauss
+from .helpers import _strip_superfluous_hitran_data, _convert_quantum_strings
 
 def _spec_convol_klaus(wave,flux,R):
     '''
@@ -82,7 +82,6 @@ def _spec_convol_klaus(wave,flux,R):
 
     return flux_oldsampling
 
-
 #------------------------------------------------------------------------------------                                     
 def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, deltav=None, isotopologue_number=1, d_pc=1,
               aupmin=None, convol_fwhm=None, eupmax=None, vup=None, swmin=None):
@@ -123,7 +122,7 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     eupmax : float, optional
         Maximum energy of transitions to consider, in K
     vup : float, optional
-        Optional parameter to restrict output to certain upper level vibrational states
+        Optional parameter to restrict output to certain upper level vibrational states.  Only works if 'Vp' field is a single integer.
 
     Returns
     --------
@@ -143,18 +142,7 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
         deltav=compute_thermal_velocity(molecule_name, temp)
 
 #Read HITRAN data
-    hitran_data=extract_hitran_data(molecule_name,wmin,wmax,isotopologue_number=isotopologue_number, eupmax=eupmax, aupmin=aupmin, swmin=swmin)
-#Select for desired vup if relevant
-    if(vup is not None):
-        try:
-            x=int(hitran_data['Vp'][0])
-        except ValueError:
-            print("Vp is not an integer, so the vup parameter cannot be used.  Ignoring this parameter.")
-            vup=None
-    if(vup is not None):
-        vupbool = [(int(myvp)==1) for myvp in hitran_data['Vp']]
-        hitran_data=hitran_data[vupbool]
-
+    hitran_data=extract_hitran_data(molecule_name,wmin,wmax,isotopologue_number=isotopologue_number, eupmax=eupmax, aupmin=aupmin, swmin=swmin, vup=vup)
 
     wn0=hitran_data['wn']*1e2 # now m-1
     aup=hitran_data['a']
@@ -225,6 +213,8 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     hitran_data['lineflux']=lineflux
     hitran_data['tau_peak']=tau0
     hitran_data['fthin']=fthin
+    hitran_data=_convert_quantum_strings(hitran_data)
+    hitran_data=_strip_superfluous_hitran_data(hitran_data)
     slabdict['lineparams']=hitran_data
 
 #Line flux array

@@ -9,7 +9,6 @@ import pickle as pickle
 def calc_solid_angle(radius,distance):
     '''
     Convenience function to calculate solid angle from radius and distance, assuming a disk shape.
-    (For more complex shapes, user can calculate themselves).
 
     Parameters
     ----------
@@ -17,16 +16,17 @@ def calc_solid_angle(radius,distance):
      radius value in AU
     distance : float
      distance value in parsec
+
     Returns
     ----------
-    
+    solid angle : float
+      solid angle in steradians
     '''
     return np.pi*radius**2./(distance*206265.)**2.
 
 def calc_radius(solid_angle,distance):
     '''
-    Convenience function to calculate solid angle from radius and distance, assuming a disk shape.
-    (For more complex shapes, user can calculate themselves).
+    Convenience function to calculate disk radius from solid angle and distance, assuming a disk shape.
 
     Parameters
     ----------
@@ -34,9 +34,11 @@ def calc_radius(solid_angle,distance):
      solid angle value in radians
     distance : float
      distance value in parsec
+
     Returns
     ----------
-    
+    radius : float
+     disk radius in AU
     '''
     return (distance*206265)*np.sqrt(solid_angle/np.pi)
 

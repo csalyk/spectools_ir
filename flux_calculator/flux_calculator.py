@@ -8,7 +8,7 @@ from astropy.table import Table
 
 from spectools_ir.utils import extract_hitran_data, fwhm_to_sigma, sigma_to_fwhm
 from .helpers import _line_fit, _calc_linewidth, _calc_line_flux_from_fit
-from .helpers import _strip_superfluous_hitran_data, _convert_quantum_strings, _calc_numerical_flux
+from .helpers import _strip_superfluous_hitran_data, _convert_quantum_strings
 
 def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=True,vet_fits=False,
                 plot=False,v_dop=0,amp=0.1,ymin=None,ymax=None):
@@ -117,7 +117,7 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
                     ax1.axvline(p[1]-3*p[2],label='Numerical limit',color='C3',linestyle='--')
                     ax1.axvline(p[1]+3*p[2],color='C3',linestyle='--')
                     ax1.legend()
-                    ax1.set_title(hitran_data['Qpp'][i])
+                    if('Qpp' in hitran_data.columns): ax1.set_title(hitran_data['Qpp'][i])
                     plt.show(block=False)
                     plt.close()    
                 user_input=None
@@ -142,7 +142,7 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
                     ax1.set_xlabel(r'Wavelength [$\mu$m]')
                     ax1.set_ylabel(r'F$_\nu$ [Jy]')
                     ax1.legend()
-                    ax1.set_title(hitran_data['Qpp'][i])
+                    if('Qpp' in hitran_data.columns): ax1.set_title(hitran_data['Qpp'][i])
                     plt.show(block=False)
                     plt.pause(0.5)
                     plt.close()    
@@ -172,18 +172,19 @@ def make_lineshape(wave,flux, lineflux_data, dv=3., voffset=None,norm=None):
         set of fluxes for spectrum, in units of Jy                                                                                                        
     lineflux_data : astropy table                                                                                                                         
         table in same format as flux_calculator output                                                                                                    
-    dv : float, optional                                                                                                                                  
-        size of velocity grid cell, in units of km/s.  Defaults to 3 km/s.                                                                                
+    dv : float, optional
+        bin size for resultant lineshape, in km/s.  Defaults to 3 km/s.
     voffset : float, optional                                                                                                                             
         Doppler shift of observed spectrum in km/s.  Defaults to median of lineflux fits.                                                                 
-                                                                                                                                                          
-                                                                                                                                                          
-    Returns                                                                                                                                               
+    norm : str, optional
+        String describing normalization type.  Currently only option is 'Maxmin', which sets max to 1, min to 0.  Defaults to None.
+    
+    Returns
     ---------                                                                                                                                             
-    (vel,flux) tuple                                                                                                                                      
+    (interpvel,interpflux): tuple containing interpolated line shape     
                                                                                                                                                           
     '''
-    w0=np.array(1e4/lineflux_data['wn'])
+    w0=np.array(lineflux_data['wave'])
 
     nlines=np.size(w0)
 

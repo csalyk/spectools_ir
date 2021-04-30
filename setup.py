@@ -20,7 +20,18 @@ setup(
     package_data={'': ['*.json']},
     install_requires=[
         'astropy',
+        'astroquery',
         'emcee',
-        'numpy'
+        'numpy',
+        'os',
+        'urllib',
+        'emcee',
+        'pandas',
+        'json',
+        'time',
+        'pkgutil',
+        'IPython',
+        'corner',
+        'matplotlib'
     ]
 ) 

@@ -1,9 +1,9 @@
 import numpy as np
+
 from astroquery.hitran import Hitran
+
 from astropy import units as un
 from astropy.constants import c, k_B, h, u
-from molmass import Formula
-import pdb as pdb
 
 def make_rotation_diagram(lineparams, units='mks', fluxkey='lineflux'):
     '''                                                                                                     
@@ -13,12 +13,15 @@ def make_rotation_diagram(lineparams, units='mks', fluxkey='lineflux'):
     ---------                                                                                               
     lineparams: dictionary                                                                                  
         dictionary output from make_spec                                                                    
-                                                                                                            
+    units : string, optional
+        either 'mks', 'cgs' or 'mixed' (all mks, but wavenumber in cm-1)
+    fluxkey : string, optional
+        name of column in lineparams holding the line flux data
+
     Returns                                                                                                 
     --------                                                                                                
     rot_table: astropy Table                                                                                
-        Table of x and y values for rotation diagram.                                                       
-                                                                                                            
+        Table of x and y values for rotation diagram.                                                                                                             
     '''
 
     if('gup' in lineparams.columns):
@@ -48,6 +51,9 @@ def compute_thermal_velocity(molecule_name, temp, isotopologue_number=1):
       Molecule name (e.g., 'CO', 'H2O')
     temp : float
       Temperature at which to compute thermal velocity
+    isotopologue_number : float, optional
+      Isotopologue number, in order of abundance in Earth's atmosphere (see HITRAN documentation for more info)
+      Defaults to 1 (most common isotopologue)
 
     Returns
     -------
@@ -159,6 +165,9 @@ def extract_hitran_data(molecule_name, wavemin, wavemax, isotopologue_number=1, 
         Minimum extracted Einstein A coefficient
     swmin : float, optional
         Minimum extracted line strength
+    vup : float, optional
+        Can be used to selet upper level energy.  Note: only works if 'Vp' string is a single number.
+
     Returns
     ------- 
     hitran_data : astropy table
@@ -347,7 +356,7 @@ def spec_convol(wave, flux, dv):
     flux : numpy array                                                                                              
         flux density values, in units of Energy/area/time/Hz                                                        
     dv : float                                                                                                      
-        FWHM of convolution kernel, in km/s                                                                         
+        FWHM of Gaussian convolution kernel, in km/s                                                                         
                                                                                                                     
     Returns                                                                                                         
     --------                                                                                                        
@@ -358,7 +367,6 @@ def spec_convol(wave, flux, dv):
 
 #Program assumes units of dv are km/s, and dv=FWHM                                                                 \
                                                                                                                     
-
     dv=fwhm_to_sigma(dv)
     n=round(4.*dv/(c.value*1e-3)*np.median(wave)/(wave[1]-wave[0]))
     if (n < 10):
@@ -423,19 +431,14 @@ def get_molmass(molecule_name,isotopologue_number=1):
     ----------                                                                                                                   \
                                                                                                                                   
     molecular_formula : str                                                                                                      \
-                                                                                                                                  
         The string describing the molecule.                                                                                       
     isotopologue_number : int, optional                                                                                           
         The isotopologue number, from most to least common.                                                                      \
                                                                                                                                   
-                                                                                                                                 \
-                                                                                                                                  
     Returns                                                                                                                      \
                                                                                                                                   
     -------                                                                                                                      \
-                                                                                                                                  
     mu : float                                                                                                                   \
-                                                                                                                                  
         Molecular mass in amu                                                                                                     
     '''
 

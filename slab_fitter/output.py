@@ -1,24 +1,40 @@
 import numpy as np
-from astropy.io import fits
-from astropy.constants import c,h, k_B, G, M_sun, au, pc, u
-import pickle as pickle
-from spectools_ir.utils import extract_hitran_data, get_global_identifier, translate_molecule_identifier, get_molmass
-from .helpers import line_ids_from_flux_calculator,line_ids_from_hitran
-import pdb as pdb
-from astropy.table import Table
-from astropy import units as un
 import os
 import urllib
 import emcee
 import pandas as pd
-from astropy.convolution import Gaussian1DKernel, convolve
 import json as json
 import time
 from IPython.display import display, Math
 import corner
 import matplotlib.pyplot as plt
 
+from astropy.io import fits
+from astropy.constants import c,h, k_B, G, M_sun, au, pc, u
+from astropy.table import Table
+from astropy import units as un
+from astropy.convolution import Gaussian1DKernel, convolve
+
+from spectools_ir.utils import extract_hitran_data, get_global_identifier, translate_molecule_identifier, get_molmass
+from .helpers import line_ids_from_flux_calculator,line_ids_from_hitran
+
 def compute_model_fluxes(mydata,samples):
+    '''
+    Function to compute model fluxes for same lines as in dataset.
+
+    Parameters
+    ----------
+    mydata : Data object
+     Instance of Data class, provides routine with lines to calculate
+    samples : numpy array
+     Array holding arrays of MCMC output samples.  Used to find best-fit parameters.s
+
+    Returns
+    ---------
+    lineflux : numpy array
+     Array of line fluxes 
+    '''
+
     bestfit_dict=find_best_fit(samples)
     logn=bestfit_dict['logN']
     temp=bestfit_dict['T']
@@ -76,11 +92,39 @@ def _get_partition_function(mydata,temp):
     return q
 
 def remove_burnin(presamples,burnin):
+    '''
+    Function to remove burnin samples from MCMC output samples
+
+    Parameters
+    ----------
+    presamples : numpy array
+     Array holding arrays of MCMC output samples.  Used to find best-fit parameters.s
+    burnin : integer
+     Number of samples considered part of the "burnin"
+
+    Returns
+    ---------
+    postsamples : numpy array
+     Array holding arrays of MCMC output samples after removal of burnin samples.
+    '''
+
     postsamples=presamples[burnin:]
     return postsamples
 
 def corner_plot(samples,outfile=None,**kwargs):
-    parlabels=[ r"$\log(\ n_\mathrm{tot} [\mathrm{cm}^{-2}]\ )$",r"Temperature [K]", "$\log(\ {\Omega [\mathrm{rad}]}\ )$"]
+    '''
+    Function to make a corner plot for output samples
+
+    Parameters
+    ----------
+    samples : numpy array
+     Array holding arrays of MCMC output samples.
+    outfile : str, optional
+     Path to output file to hold resultant figure
+    '''
+
+
+    parlabels=[ r"$\log(\ n_\mathrm{tot} [\mathrm{m}^{-2}]\ )$",r"Temperature [K]", "$\log(\ {\Omega [\mathrm{rad}]}\ )$"]
     fig = corner.corner(samples,
                     labels=parlabels,
                     show_titles=True, title_kwargs={"fontsize": 12},**kwargs)
@@ -88,8 +132,19 @@ def corner_plot(samples,outfile=None,**kwargs):
         fig.savefig(outfile)
 
 def trace_plot(samples,xr=[None,None]):
+    '''
+    Function to make a trace plot for each parameter of slab model fit
+
+    Parameters
+    ----------
+    samples : numpy array
+     Array holding arrays of MCMC output samples. 
+    xr : 2-element array, optional
+     Range of samples to plot
+    '''
+
     fig, axes = plt.subplots(3, figsize=(10, 7), sharex=True)
-    parlabels=[ r"$\log(\ n_\mathrm{tot} [\mathrm{cm}^{-2}]\ )$",r"Temperature [K]", "$\log(\ {\Omega [\mathrm{rad}]}\ )$"]
+    parlabels=[ r"$\log(\ n_\mathrm{tot} [\mathrm{m}^{-2}]\ )$",r"Temperature [K]", "$\log(\ {\Omega [\mathrm{rad}]}\ )$"]
     ndims=3
     for i in range(ndims):
         ax = axes[i]
@@ -99,9 +154,24 @@ def trace_plot(samples,xr=[None,None]):
         ax.set_xlim(xr)
     axes[-1].set_xlabel("step number");
 
-
 def find_best_fit(samples,show=False):
-    parlabels=[ r"\log(\ n_\mathrm{tot} [\mathrm{cm}^{-2}]\ )",r"Temperature [K]", r"\log(\ {\Omega [\mathrm{rad}]}\ )"]
+    '''
+    Function to find best fit parameters
+
+    Parameters
+    ----------
+    samples : numpy array
+     Array holding arrays of MCMC output samples.
+    show : boolean, optional
+     Boolean to display or not display nicely-formatted results
+
+    Returns
+    ---------
+    bestfit_dict : 
+     Dictionary holding best-fit slab model parameters with plus and minus error bars.
+     Based on 16, 50 and 84th percentiles of posterior distribution.
+    '''
+    parlabels=[ r"\log(\ n_\mathrm{tot} [\mathrm{m}^{-2}]\ )",r"Temperature [K]", r"\log(\ {\Omega [\mathrm{rad}]}\ )"]
     paramkeys=['logN','T','logOmega']
     perrkeys=['logN_perr','T_perr','logOmega_perr']
     nerrkeys=['logN_nerr','T_nerr','logOmega_nerr']
