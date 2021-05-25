@@ -1,7 +1,7 @@
 from distutils.core import setup
 setup(
     name = 'spectools-ir',
-    packages = ['flux_calculator','slabspec','slab_fitter'],
+    packages = ['flux_calculator','slabspec','slab_fitter','utils'],
     version = '0.1.0',
     description = 'Tools for analysis and modeling of IR spectra',
     long_description=open('README.md').read(),

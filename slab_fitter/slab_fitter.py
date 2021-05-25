@@ -4,7 +4,6 @@ import emcee
 import pandas as pd
 import json as json
 import time
-import pandas as pd
 import pkgutil
 
 from astropy.io import fits

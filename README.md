@@ -1,55 +1,37 @@
 # spectools-ir
-Code is created with infrared medium/high-resolution spectroscopy in mind, and often assumes spectra
-are in units of Jy and microns.  Users interested in other applications should proceed with caution.  
+Spectools_ir is a small suite of tools designed for analysis of medium/high-resolution IR molecular spectra.  It consists
+of three main sub-modules (flux_calculator, slabspec, and slab_fitter) as well as a 'utils' sub-module, with
+a few additional functions.  
 
-Users are requested to let the developer know if they are using the code.  Code has been
+Spectools_ir was written with infrared medium/high-resolution molecular spectroscopy in mind.  It often assumes spectra
+are in units of Jy and microns, and it uses information from the HITRAN molecular database.  Somne routines are more general, but
+users interested in other applications should proceed with caution.
+
+Users are requested to let the developer know if they are using the code in spectools_ir.  The code has been
 tested for only a few use cases, and users utilize at their own risk.
 
 # Requirements
 Requires internet access to utilize astroquery.hitran and access HITRAN partition function files
 
-Requires the astropy package
+Requires several standard packages, as well as astropy, astroquery, corner, and emcee.
 
 #Modules
 flux_calculator is a set of python codes to compute line fluxes from an IR spectrum.
 
-slab_fitter is a set of python codes to perform MCMC slab model fits to CO rotation digrams.  Code is currently
-under development and is not ready for use.
-
 slabspec is a set of python codes to produce LTE slab model emission spectra of molecules using the HITRAN database.
 
-## Functions
-extract_hitran_data extracts relevant data from HITRAN database
+slab_fitter is a set of python codes to perform MCMC slab model fits to line fluxes using "emcee" with flat priors. 
 
-calc_fluxes calculates fluxes from spectra
+## Simnple Functions
+utils.extract_hitran_data extracts relevant data from HITRAN database
 
-compute_fluxes calculates line fluxes from relevant HITRAN info and model parameters (column density, temperature and solid angle)
+flux_calculator.calc_fluxes calculates fluxes from spectra
 
 make_rotation_diagram makes a rotation diagram from line fluxes
 
 ## Usage
 
-```python
-from spectools import extract_hitran_data, calc_fluxes, make_rotation_diagram
-
-#Read in HITRAN data
-hitran_data=extract_hitran_data('CO',4.6,5.2,vup=1)  #astropy table
-
-#Read in spectral data
-infile='AATau_M.fits'
-
-hdulist=fits.open(infile)
-data=hdulist[1].data
-wave=data['WAVELENGTH'][0]*1e-3
-flux=data['FLUX'][0]
-
-#Calculate fluxes
-out=calc_fluxes(wave,flux,hitran_data, v_dop=0,fwhm_v=40.,sep_v=200.,cont=1.05,vet_fits=True, plot=True)
-
-rot=make_rotation_diagram(out)
-```
-
-A more complete example can be found in docs/example.ipynb
+Example usage can be found in docs/example.ipynb
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
