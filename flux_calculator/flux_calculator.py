@@ -9,6 +9,7 @@ from astropy.table import Table
 from spectools_ir.utils import extract_hitran_data, fwhm_to_sigma, sigma_to_fwhm
 from .helpers import _line_fit, _calc_linewidth, _calc_line_flux_from_fit
 from .helpers import _strip_superfluous_hitran_data, _convert_quantum_strings
+from .helpers import _calc_numerical_flux
 
 def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=True,vet_fits=False,
                 plot=False,v_dop=0,amp=0.1,ymin=None,ymax=None):
@@ -188,7 +189,10 @@ def make_lineshape(wave,flux, lineflux_data, dv=3., voffset=None,norm=None):
 
     nlines=np.size(w0)
 
-    if(voffset is None): voffset=np.median(lineflux_data['v_dop_fit'])    #If Doppler shift is not defined, use median from lineflux_data                 
+    if(voffset is None and 'v_dop_fit' in lineflux_data.columns): 
+        voffset=np.median(lineflux_data['v_dop_fit'])    #If Doppler shift is not specified, use median from lineflux_data if it exists
+    if(voffset is None and not('v_dop_fit' in lineflux_data.columns)): 
+        voffset=0    #If Doppler shift is not defined, use 0 if lineflux_data has no element v_dop_fit  
     w0*=(1+voffset*1e3/c.value)    #Apply Doppler shift                                                                                                   
 
     #Make interpolation grid                                                                                                                              
