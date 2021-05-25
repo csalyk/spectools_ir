@@ -23,13 +23,6 @@ slabspec is a set of python codes to produce LTE slab model emission spectra of 
 slab_fitter is a set of python codes to perform MCMC slab model fits to line fluxes using "emcee" (Foreman-Mackey et al. 2013; https://github.com/dfm/emcee)
 with flat priors. 
 
-# Simple Functions
-utils.extract_hitran_data extracts relevant data from HITRAN database
-
-flux_calculator.calc_fluxes calculates fluxes from spectra
-
-make_rotation_diagram makes a rotation diagram from line fluxes
-
 # Usage
 
 Example usage can be found in docs/example.ipynb
