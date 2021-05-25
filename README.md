@@ -4,7 +4,7 @@ of three main sub-modules (flux_calculator, slabspec, and slab_fitter) as well a
 a few additional functions.  
 
 Spectools_ir was written with infrared medium/high-resolution molecular spectroscopy in mind.  It often assumes spectra
-are in units of Jy and microns, and it uses information from the HITRAN molecular database.  Somne routines are more general, but
+are in units of Jy and microns, and it uses information from the HITRAN molecular database.  Some routines are more general, but
 users interested in other applications should proceed with caution.
 
 Users are requested to let the developer know if they are using the code in spectools_ir.  The code has been
@@ -15,24 +15,25 @@ Requires internet access to utilize astroquery.hitran and access HITRAN partitio
 
 Requires several standard packages, as well as astropy, astroquery, corner, and emcee.
 
-#Modules
+# Modules
 flux_calculator is a set of python codes to compute line fluxes from an IR spectrum.
 
 slabspec is a set of python codes to produce LTE slab model emission spectra of molecules using the HITRAN database.
 
-slab_fitter is a set of python codes to perform MCMC slab model fits to line fluxes using "emcee" with flat priors. 
+slab_fitter is a set of python codes to perform MCMC slab model fits to line fluxes using "emcee" (Foreman-Mackey et al. 2013; https://github.com/dfm/emcee)
+with flat priors. 
 
-## Simnple Functions
+# Simple Functions
 utils.extract_hitran_data extracts relevant data from HITRAN database
 
 flux_calculator.calc_fluxes calculates fluxes from spectra
 
 make_rotation_diagram makes a rotation diagram from line fluxes
 
-## Usage
+# Usage
 
 Example usage can be found in docs/example.ipynb
 
-## License
+# License
 [MIT](https://choosealicense.com/licenses/mit/)
 
