@@ -4,6 +4,11 @@ from astroquery.hitran import Hitran
 
 from astropy import units as un
 from astropy.constants import c, k_B, h, u
+from astropy.convolution import Gaussian1DKernel, convolve
+
+import matplotlib.pyplot as plt
+import matplotlib as matplotlib
+import sys as sys
 
 def make_rotation_diagram(lineparams, units='mks', fluxkey='lineflux'):
     '''                                                                                                     
@@ -420,6 +425,77 @@ def spec_convol(wave, flux, dv):
 
     return newflux
 
+def spec_convol_R(wave, flux, R):
+    '''                                                                                                                        
+    Convolve a spectrum, given wavelength in microns and flux density, by a given wavelength-dependent R                             
+                                                                                                                               
+    Parameters                                                                                                                 
+    ---------                                                                                                                  
+    wave : numpy array                                                                                                         
+        wavelength values, in microns                                                                                          
+    flux : numpy array                                                                                                         
+        flux density values, in units of Energy/area/time/Hz                                                                   
+    R : numpy array                                                                                                                  
+        Resolving power (lambda / dlambda)                                                                                     
+                                                                                                                               
+    Returns                                                                                                                    
+    --------                                                                                                                   
+    newflux : numpy array                                                                                                      
+        Convolved spectrum flux density values, in same units as input                                                         
+                                                                                                                               
+    '''
+    # find the minimum spacing between wavelengths in the dataset                                                              
+    dws = np.abs(wave - np.roll(wave, 1))
+    dw_min = np.min(dws)   #Minimum delta-wavelength between points in dataset                                                 
+
+    fwhm = wave / R  # FWHM of resolution element as a function of wavelength ("delta lambda" in same units as wave)           
+    #fwhm / dw_min gives FWHM values expressed in units of minimum spacing, or the sampling for each wavelength                
+    #(sampling is sort of the number of data points per FWHM)                                                                  
+    #The sampling is different for each point in the wavelength array, because the FWHM is wavelength dependent                
+    #fwhm_s then gives the minimum value of the sampling - the most poorly sampled wavelength.                                 
+    fwhm_s = np.min(fwhm / dw_min)  # find mininumvalue of sampling for this dataset                                           
+    # but do not allow the sampling FWHM to be less than Nyquist                                                               
+    # (i.e., make sure there are at least two points per resolution element)                                                   
+    fwhm_s = np.max([2., fwhm_s])  #Will return 2 only if fwhm_s is less than 2                                                
+    #If you want all wavelengths to have the same sampling per resolution element,                                             
+    #then this ds gives the wavelength spacing for each wavelength (in units of wavelength)                                    
+    ds = fwhm / fwhm_s
+    # use the min wavelength as a starting point                                                                               
+    w = np.min(wave)
+    #Initialize array to hold new wavelength values                                                                            
+    #Note: it's much faster (~50%) to append to lists than np.array()'s                                                        
+    wave_constfwhm = []
+
+
+    # doing this as a loop is slow, but straightforward.                                                                       
+    while w < np.max(wave):
+        # use interpolation to get delta-wavelength from the sampling as a function of wavelength.                             
+        # this method is over 5x faster than the original use of scipy.interpolate.interp1d.                                   
+        w += np.interp(w,wave,ds)  #Get value of ds at w, then add to old value of w                                           
+        wave_constfwhm.append(w)
+
+    wave_constfwhm.pop()  # remove last point which is an extrapolation                                                        
+    wave_constfwhm = np.array(wave_constfwhm)  #Convert list to numpy array                                                    
+
+    # interpolate the flux onto the new wavelength set                                                                         
+    flux_constfwhm = np.interp(wave_constfwhm,wave,flux)
+
+    # convolve the flux with a gaussian kernel; first convert the FWHM to sigma                                                
+    sigma_s = fwhm_s / 2.3548
+    try:
+        # for astropy < 0.4                                                                                                    
+        g = Gaussian1DKernel(width=sigma_s)
+    except TypeError:
+        # for astropy >= 0.4                                                                                                   
+        g = Gaussian1DKernel(sigma_s)
+    # use boundary='extend' to set values outside the array to nearest array value.                                            
+    # this is the best approximation in this case.                                                                             
+    flux_conv = convolve(flux_constfwhm, g, normalize_kernel=True, boundary='extend')
+    flux_oldsampling = np.interp(wave, wave_constfwhm, flux_conv)
+
+    return flux_oldsampling
+
+
 def get_molmass(molecule_name,isotopologue_number=1):
     '''                                                                                                                          \
                                                                                                                                   
@@ -502,3 +578,205 @@ def get_molmass(molecule_name,isotopologue_number=1):
     return mass[mol_isot_code]
 
 
+def get_miri_mrs_resolution(subband, wavelength):
+    '''                                                                                                                        
+    Retrieve approximate MIRI MRS spectral resolution given a wavelength                                                       
+                                                                                                                               
+    Parameters                                                                                                                 
+                                                                                                                               
+    ---------                                                                                                                  
+    subband: string                                                                                                            
+      Subband (1A, 1B, ...4C)                                                                                                  
+                                                                                                                               
+    wavelength: float                                                                                                          
+      Wavelength in microns                                                                                                    
+                                                                                                                               
+    Returns                                                                                                                    
+                                                                                                                               
+    ---------                                                                                                                  
+    R: float                                                                                                                   
+      Spectral resolution                                                                                                      
+                                                                                                                               
+    '''
+    wavelength=np.array(wavelength)
+
+    #Define spectral resolution dictionaries.  Table 1 of Wells et al. MIRI paper                                              
+    w0={
+        "1A":4.87,
+        "1B":5.62,
+        "1C":6.49,
+        "2A":7.45,
+        "2B":8.61,
+        "2C":9.91,
+        "3A":11.47,
+        "3B":13.25,
+        "3C":15.30,
+        "4A":17.54,
+        "4B":20.44,
+        "4C":23.84
+        }
+    w1={
+        "1A":5.82,
+        "1B":6.73,
+        "1C":7.76,
+        "2A":8.90,
+        "2B":10.28,
+        "2C":11.87,
+        "3A":13.67,
+        "3B":15.80,
+        "3C":18.24,
+        "4A":21.10,
+        "4B":24.72,
+        "4C":28.82
+        }
+    R0={
+        "1A":3320.,
+        "1B":3190.,
+        "1C":3100.,
+        "2A":2990.,
+        "2B":2750.,
+        "2C":2860.,
+        "3A":2530.,
+        "3B":1790.,
+        "3C":1980.,
+        "4A":1460.,
+        "4B":1680.,
+        "4C":1630.
+        }
+    R1={
+        "1A":3710.,
+        "1B":3750.,
+        "1C":3610.,
+        "2A":3110.,
+        "2B":3170.,
+        "2C":3300.,
+        "3A":2880.,
+        "3B":2640.,
+        "3C":2790.,
+        "4A":1930.,
+        "4B":1770.,
+        "4C":1330.
+        }
+
+    try:  #Check that given sub-band exists
+      R1[subband]
+    except KeyError:
+      print("KeyError: Please provide a valid sub-band.")
+      sys.exit(1)
+
+    if(np.size(wavelength)>1):
+        if(any(wavelength<w0[subband]) or any(wavelength>w1[subband])):   #Check that wavelength exists in sub-band
+            print("Not a valid wavelength for sub-band ",subband)
+            print("Wavelength limits for sub-band ", subband, "are ", w0[subband], " to ", w1[subband], " microns.")
+            sys.exit(1)
+
+    if(np.size(wavelength)==1):
+        if(wavelength<w0[subband] or wavelength>w1[subband]):   #Check that wavelength exists in sub-band
+            print("Not a valid wavelength for sub-band ",subband)
+            print("Wavelength limits for sub-band ", subband, "are ", w0[subband], " to ", w1[subband], " microns.")
+            sys.exit(1)
+
+    m=(R1[subband]-R0[subband])/(w1[subband]-w0[subband])
+    y0=R0[subband]
+    x0=w0[subband]
+    R=y0+m*(wavelength-x0)
+    return R
+
+def get_miri_mrs_wavelengths(subband):
+    w0={
+        "1A":4.87,
+        "1B":5.62,
+        "1C":6.49,
+        "2A":7.45,
+        "2B":8.61,
+        "2C":9.91,
+        "3A":11.47,
+        "3B":13.25,
+        "3C":15.30,
+        "4A":17.54,
+        "4B":20.44,
+        "4C":23.84
+        }
+    w1={
+        "1A":5.82,
+        "1B":6.73,
+        "1C":7.76,
+        "2A":8.90,
+        "2B":10.28,
+        "2C":11.87,
+        "3A":13.67,
+        "3B":15.80,
+        "3C":18.24,
+        "4A":21.10,
+        "4B":24.72,
+        "4C":28.82
+        }
+    try:
+        w0[subband]
+    except KeyError:
+        print("KeyError: Please provide a valid sub-band.")
+        sys.exit(1)
+    return (w0[subband],w1[subband])
+
+def make_miri_mrs_figure(figsize=(5,5)):
+    x_1a=np.linspace(4.87,5.82,num=50)
+    y_1a = [get_miri_mrs_resolution('1A',myx) for myx in x_1a]
+
+    x_1b=np.linspace(5.62,6.73,num=50)
+    y_1b = [get_miri_mrs_resolution('1B',myx) for myx in x_1b]
+
+    x_1c=np.linspace(6.49,7.76,num=50)
+    y_1c = [get_miri_mrs_resolution('1C',myx) for myx in x_1c]
+
+    x_2a=np.linspace(7.45,8.90,num=50)
+    y_2a = [get_miri_mrs_resolution('2A',myx) for myx in x_2a]
+
+    x_2b=np.linspace(8.61,10.28,num=50)
+    y_2b = [get_miri_mrs_resolution('2B',myx) for myx in x_2b]
+
+    x_2c=np.linspace(9.91,11.87,num=50)
+    y_2c = [get_miri_mrs_resolution('2C',myx) for myx in x_2c]
+
+    x_3a=np.linspace(11.47,13.67,num=50)
+    y_3a = [get_miri_mrs_resolution('3A',myx) for myx in x_3a]
+
+    x_3b=np.linspace(13.25,15.80,num=50)
+    y_3b = [get_miri_mrs_resolution('3B',myx) for myx in x_3b]
+
+    x_3c=np.linspace(15.30,18.24,num=50)
+    y_3c = [get_miri_mrs_resolution('3C',myx) for myx in x_3c]
+
+    x_4a=np.linspace(17.54,21.10,num=50)
+    y_4a = [get_miri_mrs_resolution('4A',myx) for myx in x_4a]
+
+    x_4b=np.linspace(20.44,24.72,num=50)
+    y_4b = [get_miri_mrs_resolution('4B',myx) for myx in x_4b]
+
+    x_4c=np.linspace(23.84,28.82,num=50)
+    y_4c = [get_miri_mrs_resolution('4C',myx) for myx in x_4c]
+   
+    fig=plt.figure(figsize=figsize)
+    ax1=fig.add_subplot(111)
+    ax1.plot(x_1a,y_1a,label='1A')
+    ax1.plot(x_1b,y_1b,label='1B')
+    ax1.plot(x_1c,y_1c,label='1C')
+    ax1.plot(x_2a,y_2a,label='2A')
+    ax1.plot(x_2b,y_2b,label='2B')
+    ax1.plot(x_2c,y_2c,label='2C')
+    ax1.plot(x_3a,y_3a,label='3A')
+    ax1.plot(x_3b,y_3b,label='3B')
+    ax1.plot(x_3c,y_3c,label='3C')
+    ax1.plot(x_4a,y_4a,label='4A')
+    ax1.plot(x_4b,y_4b,label='4B')
+    ax1.plot(x_4c,y_4c,label='4C')
+
+    ax1.legend()
+    ax1.set_xlim(4.5,45.1)
+    ax1.set_ylim(500,4500)
+    ax1.set_xscale('log')
+    ax1.set_xticks([5,6,7,8,9,10,20])
+    ax1.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+    ax1.set_xlabel('Wavelength [$\mu$m]',fontsize=18)
+    ax1.set_ylabel('Resolution (R)',fontsize=18)
+    plt.show()
+    return
