@@ -105,8 +105,8 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
                 if(plot==True):
                     fig=plt.figure(figsize=(10,3))
                     ax1=fig.add_subplot(111)
-                    ax1.plot(wave,flux,'C0',linestyle='steps-mid',label='All data')
-                    ax1.plot(myx,myy,'C1',linestyle='steps-mid',label='Fit data')
+                    ax1.plot(wave,flux,'C0',drawstyle='steps-mid',label='All data')
+                    ax1.plot(myx,myy,'C1',drawstyle='steps-mid',label='Fit data')
                     ax1.plot(myx,g['yfit'],'C2',label='Fit')
                     ax1.axvline(w0+wdop,color='C3',label='Line center')
                     ax1.set_xlim(np.min(myx)-dw2,np.max(myx)+dw2)
@@ -133,8 +133,8 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
                 if(plot==True):
                     fig=plt.figure(figsize=(10,3))
                     ax1=fig.add_subplot(111)
-                    ax1.plot(wave,flux,'C0',linestyle='steps-mid',label='All data')
-                    ax1.plot(myx,myy,'C1',linestyle='steps-mid',label='Fit data')
+                    ax1.plot(wave,flux,'C0',drawstyle='steps-mid',label='All data')
+                    ax1.plot(myx,myy,'C1',drawstyle='steps-mid',label='Fit data')
                     ax1.axvline(w0+wdop,color='C3',label='Line center')
                     ax1.set_xlim(np.min(myx)-dw2,np.max(myx)+dw2)
                     if(ymin is None): ymin=np.min(myy)

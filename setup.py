@@ -1,8 +1,8 @@
-from distutils.core import setup
+from setuptools import setup
 setup(
     name = 'spectools-ir',
-    packages = ['flux_calculator','slabspec','slab_fitter','utils'],
-    version = '0.1.0',
+    packages = ['spectools_ir','spectools_ir.slabspec','spectools_ir.flux_calculator','spectools_ir.utils','spectools_ir.slab_fitter'],
+    version = '0.1.7',
     description = 'Tools for analysis and modeling of IR spectra',
     long_description=open('README.md').read(),
     author='Colette Salyk',
@@ -19,19 +19,12 @@ setup(
     include_package_data=True,    
     package_data={'': ['*.json']},
     install_requires=[
-        'astropy',
-        'astroquery',
-        'emcee',
-        'numpy',
-        'os',
-        'urllib',
-        'emcee',
-        'pandas',
-        'json',
-        'time',
-        'pkgutil',
-        'IPython',
-        'corner',
-        'matplotlib'
+        'astropy>=4.2',
+        'emcee>=3.0',
+        'numpy>=1',
+        'pandas>=0.24',
+        'corner>=2.1',
+        'matplotlib>=3',
+        'astroquery>0.4'
     ]
 ) 
