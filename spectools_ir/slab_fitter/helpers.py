@@ -2,9 +2,6 @@ import numpy as np
 from astroquery.hitran import Hitran
 from astropy import units as un
 from astropy.constants import c, k_B, h, u
-from molmass import Formula
-import pdb as pdb
-import pickle as pickle
 
 def calc_solid_angle(radius,distance):
     '''
@@ -41,29 +38,6 @@ def calc_radius(solid_angle,distance):
      disk radius in AU
     '''
     return (distance*206265)*np.sqrt(solid_angle/np.pi)
-
-
-def line_ids_from_flux_calculator(flux_calculator_output, line_id_dict):
-    line_id_list=[]
-    for i,myrow in enumerate(flux_calculator_output):
-        line_id_key=(str(myrow['molec_id'])+str(myrow['local_iso_id']) + str(myrow['Vp_HITRAN'])+str(myrow['Vpp_HITRAN'])+ str(myrow['Qp_HITRAN'])+str(myrow['Qpp_HITRAN'])).replace(" ","")
-        line_id_list.append(line_id_dict[line_id_key])
-    
-    line_id_arr=np.array(line_id_list)
-
-    return line_id_arr
-
-def line_ids_from_hitran(hitran_output):
-    line_id_dict=pickle.load(open('line_id_dict.p','rb'))
-
-    line_id_list=[]
-    for i,myrow in enumerate(hitran_output):
-        line_id_key=(str(myrow['molec_id'])+str(myrow['local_iso_id']) + str(myrow['Vp'])+str(myrow['Vpp'])+ str(myrow['Qp'])+str(myrow['Qpp'])).replace(" ","")
-        line_id_list.append(line_id_dict[line_id_key])
-
-    line_id_arr=np.array(line_id_list)
-
-    return line_id_arr
 
 def get_molmass(molecule_name,isotopologue_number=1):
     '''                                                                                                                                

@@ -2,8 +2,9 @@ from setuptools import setup
 setup(
     name = 'spectools-ir',
     packages = ['spectools_ir','spectools_ir.slabspec','spectools_ir.flux_calculator','spectools_ir.utils','spectools_ir.slab_fitter'],
-    version = '0.1.7',
+    version = '0.1.0',
     description = 'Tools for analysis and modeling of IR spectra',
+    long_description_content_type="text/markdown",
     long_description=open('README.md').read(),
     author='Colette Salyk',
     author_email='cosalyk@vassar.edu',
@@ -16,6 +17,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Topic :: Scientific/Engineering :: Astronomy',
         ],
+    url='https://github.com/csalyk/spectools_ir',
     include_package_data=True,    
     package_data={'': ['*.json']},
     install_requires=[
@@ -25,6 +27,8 @@ setup(
         'pandas>=0.24',
         'corner>=2.1',
         'matplotlib>=3',
-        'astroquery>0.4'
+        'astroquery>0.4',
+        'scipy>=1.2',
+        'IPython>=7.4',
     ]
 ) 

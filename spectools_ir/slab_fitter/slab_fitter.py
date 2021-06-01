@@ -6,6 +6,7 @@ import json as json
 import time
 import pkgutil
 
+import pdb as pdb
 from astropy.io import fits
 from astropy.constants import c,h, k_B, G, M_sun, au, pc, u
 from astropy.table import Table
@@ -13,7 +14,6 @@ from astropy import units as un
 from astropy.convolution import Gaussian1DKernel, convolve
 
 from spectools_ir.utils import extract_hitran_data, get_global_identifier, translate_molecule_identifier, get_molecule_identifier, get_molmass
-from .helpers import line_ids_from_flux_calculator,line_ids_from_hitran
 
 def read_data_from_file(filename,vup=None,**kwargs):
     '''
@@ -117,10 +117,10 @@ class Retrieval():
         end_time=time.time()
         print("Number of total samples:", Nwalkers*Nsamples)
         print("Run time [s]:", end_time-start_time)
+        #sampler.chain has dimensions (Nwalkers, Nburnin+Nsamples,ndims)
+#        samples = sampler.chain[:, Nburnin:, :].reshape((-1, ndims))  
 
-        samples = sampler.chain[:, Nburnin:, :].reshape((-1, ndims))
-
-        return samples
+        return sampler.chain
 
     def _lnprior(self, theta):
         lp = 0.  #initialize log prior

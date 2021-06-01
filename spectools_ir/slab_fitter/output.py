@@ -1,10 +1,6 @@
 import numpy as np
-import os
-import urllib
 import emcee
 import pandas as pd
-import json as json
-import time
 from IPython.display import display, Math
 import corner
 import matplotlib.pyplot as plt
@@ -16,7 +12,6 @@ from astropy import units as un
 from astropy.convolution import Gaussian1DKernel, convolve
 
 from spectools_ir.utils import extract_hitran_data, get_global_identifier, translate_molecule_identifier, get_molmass
-from .helpers import line_ids_from_flux_calculator,line_ids_from_hitran
 
 def compute_model_fluxes(mydata,samples):
     '''
@@ -83,6 +78,28 @@ def compute_model_fluxes(mydata,samples):
         lineflux[i]=lineflux_jykms*1e-26*1.*1e5*(1./(w0[i]*1e-4))    #mks  
     return lineflux
 
+
+def get_samples(chain,burnin):
+    '''                                                                                                                          
+    Function to remove burnin samples from MCMC output chain, reconfigure to make samples
+                                                                                                                                 
+    Parameters                                                                                                                   
+    ----------                                                                                                                   
+    presamples : numpy array                                                                                                     
+     Array holding arrays of MCMC output samples.  Used to find best-fit parameters.s                                            
+    burnin : integer                                                                                                             
+     Number of samples considered part of the "burnin"                                                                           
+                                                                                                                                 
+    Returns                                                                                                                      
+    ---------                                                                                                                    
+    postsamples : numpy array                                                                                                    
+     Array holding arrays of MCMC output samples after removal of burnin samples.                                                
+    '''
+    ndims = chain.shape[2]
+    samples = chain[:, burnin:, :].reshape((-1, ndims))
+    
+    return samples
+
 def _get_partition_function(mydata,temp):
     q=np.zeros(mydata.nlines)
     for myunique_id in mydata.unique_globals:
@@ -90,26 +107,6 @@ def _get_partition_function(mydata,temp):
         mybool=(mydata.global_id == myunique_id)
         q[mybool]=myq
     return q
-
-def remove_burnin(presamples,burnin):
-    '''
-    Function to remove burnin samples from MCMC output samples
-
-    Parameters
-    ----------
-    presamples : numpy array
-     Array holding arrays of MCMC output samples.  Used to find best-fit parameters.s
-    burnin : integer
-     Number of samples considered part of the "burnin"
-
-    Returns
-    ---------
-    postsamples : numpy array
-     Array holding arrays of MCMC output samples after removal of burnin samples.
-    '''
-
-    postsamples=presamples[burnin:]
-    return postsamples
 
 def corner_plot(samples,outfile=None,**kwargs):
     '''

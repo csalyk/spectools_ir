@@ -5,7 +5,6 @@ from astropy.constants import c, k_B, h, u
 from astropy import units as un
 from scipy.optimize import curve_fit
 from spectools_ir.utils import fwhm_to_sigma, sigma_to_fwhm
-import pdb as pdb
 
 def _convert_quantum_strings(hitran_data_in):
     '''

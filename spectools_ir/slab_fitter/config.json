@@ -6,6 +6,6 @@
 "logomegamin": -19,
 "logomegamax": -12,
 "Nwalkers": 20,
-"Nburnin": 10000,
+"Nburnin": 1000,
 "Nsamples": 3000
 }
