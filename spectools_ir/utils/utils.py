@@ -403,11 +403,11 @@ def spec_convol(wave, flux, dv):
         lwave=wave[np.int(i-n):np.int(i+n+1)]
         lflux=flux[np.int(i-n):np.int(i+n+1)]
         lvel=(lwave-wave[np.int(i)])/wave[np.int(i)]*c.value*1e-3
-        nvel=(np.max(lvel)-np.min(lvel))/(dv*.2) +3
-        vel=np.arange(nvel)
-        vel=.2*dv*(vel-np.median(vel))
-        kernel=markgauss(vel,mean=0,sigma=dv,area=1.)
-        wkernel=np.interp(lvel,vel,kernel)   #numpy interp is almost factor of 2 faster than interp1d               
+#        nvel=(np.max(lvel)-np.min(lvel))/(dv*.2) +3
+#        vel=np.arange(nvel)
+#        vel=.2*dv*(vel-np.median(vel))
+        wkernel=markgauss(lvel,mean=0,sigma=dv,area=1.)
+#        wkernel=np.interp(lvel,vel,kernel)                 
         wkernel=wkernel/np.nansum(wkernel)
         newflux[np.int(i)]=np.nansum(lflux*wkernel)/np.nansum(wkernel[np.isfinite(lflux)])
         #Note: denominator is necessary to correctly account for NaN'd regions                                     \
