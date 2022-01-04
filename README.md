@@ -1,4 +1,6 @@
 # spectools-ir
+[![DOI](https://zenodo.org/badge/360561194.svg)](https://zenodo.org/badge/latestdoi/360561194)
+
 Spectools_ir is a small suite of tools designed for analysis of medium/high-resolution IR molecular astronomical spectra.  It consists
 of three main sub-modules (flux_calculator, slabspec, and slab_fitter) as well as a 'utils' sub-module, with
 a few additional functions.  
