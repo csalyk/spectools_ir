@@ -2,14 +2,17 @@ import numpy as np
 import urllib
 import pandas as pd
 
+import sys
+
 from astropy.table import Table
 from astropy import units as un
 from astropy.io import fits
 from astropy.constants import c,h, k_B, G, M_sun, au, pc, u
 from astropy.convolution import Gaussian1DKernel, convolve
 
+from spectools_ir.utils import _check_hitran
 from spectools_ir.utils import fwhm_to_sigma, sigma_to_fwhm, compute_thermal_velocity, extract_hitran_data
-from spectools_ir.utils import  get_molecule_identifier, get_global_identifier, spec_convol
+from spectools_ir.utils import  get_molecule_identifier, get_global_identifier, spec_convol, extract_hitran_from_par
 from .helpers import _strip_superfluous_hitran_data, _convert_quantum_strings
 
 def _spec_convol_klaus(wave,flux,R):
@@ -84,7 +87,7 @@ def _spec_convol_klaus(wave,flux,R):
 
 #------------------------------------------------------------------------------------                                     
 def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, deltav=None, isotopologue_number=1, d_pc=1,
-              aupmin=None, convol_fwhm=None, eupmax=None, vup=None, swmin=None):
+              aupmin=None, convol_fwhm=None, eupmax=None, vup=None, swmin=None, parfile=None):
 
     '''
     Create an IR spectrum for a slab model with given temperature, area, and column density
@@ -137,13 +140,29 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     isot=isotopologue_number
     si2jy=1e26   #SI to Jy flux conversion factor
 
+#Test whether molecule is in HITRAN database.  If not, check for parfile and warn.
+    database=_check_hitran(molecule_name)
+    if((database=='exomol') & (parfile is None)):
+        print('This molecule is not in the HITRAN database.  You must provide a HITRAN-format parfile for this molecule.  Exiting.')
+        sys.exit()
+    if(database is None):
+        print('This molecule is not covered by this code at this time.  Exiting.')
+        sys.exit()
+
 #If local velocity field is not given, assume sigma given by thermal velocity
     if(deltav is None):
         deltav=compute_thermal_velocity(molecule_name, temp)
 
 #Read HITRAN data
-    hitran_data=extract_hitran_data(molecule_name,wmin,wmax,isotopologue_number=isotopologue_number, eupmax=eupmax, aupmin=aupmin, swmin=swmin, vup=vup)
-
+    if(parfile is not None):
+        hitran_data=extract_hitran_from_par(parfile,aupmin=aupmin,eupmax=eupmax,isotopologue_number=isotopologue_number,vup=vup,wavemin=wmin,wavemax=wmax)
+    else:  #parfile not provided.  Read using extract_hitran_data
+        try:    
+            hitran_data=extract_hitran_data(molecule_name,wmin,wmax,isotopologue_number=isotopologue_number, eupmax=eupmax, aupmin=aupmin, swmin=swmin, vup=vup)
+        except:
+            print("astroquery call to HITRAN failed. This can happen when your molecule does not have any lines in the requested wavelength region")
+            sys.exit(1)
+           
     wn0=hitran_data['wn']*1e2 # now m-1
     aup=hitran_data['a']
     eup=(hitran_data['elower']+hitran_data['wn'])*1e2 #now m-1                                                             
@@ -258,9 +277,16 @@ def _compute_partition_function(molecule_name,temp,isotopologue_number=1):
       The partition function
     '''
 
+    exomol_pf_dict={200:'https://www.exomol.com/db/SiO/28Si-16O/SiOUVenIR/28Si-16O__SiOUVenIR.pf'}
+
     G=get_global_identifier(molecule_name, isotopologue_number=isotopologue_number)
-    qurl='https://hitran.org/data/Q/'+'q'+str(G)+'.txt'
+    if(G<200):  #in HITRAN database
+        qurl='https://hitran.org/data/Q/'+'q'+str(G)+'.txt'
+    if(G>=200):  #presumed to be in exomol
+        qurl=exomol_pf_dict[G]
+
     handle = urllib.request.urlopen(qurl)
+    print('Reading partition function from: ',qurl)
     qdata = pd.read_csv(handle,sep=' ',skipinitialspace=True,names=['temp','q'],header=None)
 
 #    pathmod=os.path.dirname(__file__)
