@@ -1,13 +1,13 @@
 import numpy as np
 
-from numpy import uint,float64
-import pdb as pdb
+from numpy import uint,float64,float32
 import os as os
 from astroquery.hitran import Hitran
 
 from astropy import units as un
 from astropy.constants import c, k_B, h, u
 from astropy.convolution import Gaussian1DKernel, convolve
+from astropy.table import Table
 
 import matplotlib.pyplot as plt
 import matplotlib as matplotlib
@@ -297,9 +297,14 @@ def get_global_identifier(molecule_name,isotopologue_number=1):
                'CS_1':97,'CS_2':98,'CS_3':99,'CS_4':100,
                'SO3_1':114,
                'C2N2_1':123,
-               'COCl2_1':124,'COCl2_2':125}
+               'COCl2_1':124,'COCl2_2':125,'SiO_1':200}
+ #SiO is not in HITRAN, so I just assigned it 200
  
-    return trans[mol_isot_code]
+    try:
+        return trans[mol_isot_code]
+    except KeyError:
+        print('The molecule/isot combination ',mol_isot_code,' is not in HITRAN and not covered by this code.')
+        raise KeyError
 
 #Code from Nathan Hagen
 #https://github.com/nzhagen/hitran
@@ -349,9 +354,27 @@ def get_molecule_identifier(molecule_name):
              '25':'H2O2',  '26':'C2H2', '27':'C2H6',   '28':'PH3',  '29':'COF2', '30':'SF6',  '31':'H2S',   '32':'HCOOH',
              '33':'HO2',   '34':'O',    '35':'ClONO2', '36':'NO+',  '37':'HOBr', '38':'C2H4', '39':'CH3OH', '40':'CH3Br',
              '41':'CH3CN', '42':'CF4',  '43':'C4H2',   '44':'HC3N', '45':'H2',   '46':'CS',   '47':'SO3'}
+
     ## Invert the dictionary.                                                                                                          
     trans = {v:k for k,v in trans.items()}
     return(int(trans[molecule_name]))
+
+def _check_hitran(molecule_name):
+
+    hitran_list = ['H2O','CO2','O3','N2O','CO','CH4','O2','NO','SO2','NO2','NH3','HNO3','OH','HF','HCl','HBr',
+             'HI','ClO','OCS','H2CO','HOCl','N2','HCN','CH3Cl',
+             'H2O2','C2H2','C2H6','PH3','COF2','SF6','H2S','HCOOH',
+             'HO2','O','ClONO2','NO+','HOBr','C2H4','CH3OH','CH3Br',
+             'CH3CN', 'CF4','C4H2','HC3N','H2','CS','SO3']
+
+    exomol_list=['SiO']
+
+    if(molecule_name in hitran_list):
+        return 'HITRAN'
+    if(molecule_name in exomol_list):
+        return 'exomol'
+    else:
+        return None
 
 def spec_convol(wave, flux, dv):
     '''                                                                                                             
@@ -576,7 +599,7 @@ def get_molmass(molecule_name,isotopologue_number=1):
                'SO3_1':79.95682,
                'C2N2_1':52.006148,
                'COCl2_1':97.9326199796,'COCl2_2':99.9296698896,
-               'CS2_1':75.94414,'CS2_2':77.93994,'CS2_3':76.943256,'CS2_4':76.947495}
+               'CS2_1':75.94414,'CS2_2':77.93994,'CS2_3':76.943256,'CS2_4':76.947495,'SiO_1':44.0845}
 
     return mass[mol_isot_code]
 
@@ -786,7 +809,7 @@ def make_miri_mrs_figure(figsize=(5,5)):
 
 #Modification of code from Nathan Hagen 
 #https://github.com/nzhagen/hitran  
-def extract_HITRAN_from_par(filename): 
+def extract_hitran_from_par(filename,wavemin=None,wavemax=None,isotopologue_number=1,eupmax=None,aupmin=None,swmin=None,vup=None): 
     '''
     Given a HITRAN2012-format text file, read in the parameters of the molecular absorption features.
 
@@ -814,23 +837,33 @@ def extract_HITRAN_from_par(filename):
     else:
         filehandle = open(filename, 'r')
 
-    data = {'M':[],               ## molecule identification number
-            'I':[],               ## isotope number
-            'linecenter':[],      ## line center wavenumber (in cm^{-1})
-            'S':[],               ## line strength, in cm^{-1} / (molecule m^{-2})
-            'Acoeff':[],          ## Einstein A coefficient (in s^{-1})
-            'gamma-air':[],       ## line HWHM for air-broadening
-            'gamma-self':[],      ## line HWHM for self-emission-broadening
-            'Epp':[],             ## energy of lower transition level (in cm^{-1})
-            'N':[],               ## temperature-dependent exponent for "gamma-air"
-            'delta':[],           ## air-pressure shift, in cm^{-1} / atm
+    data = {'molec_id':[],        ## molecule identification number
+            'local_iso_id':[],    ## isotope number
+            'wn':[],              ## line center wavenumber (in cm^{-1})
+            'sw':[],              ## line strength, in cm^{-1} / (molecule m^{-2})
+            'a':[],          ## Einstein A coefficient (in s^{-1})
+            'gamma_air':[],       ## line HWHM for air-broadening
+            'gamma_self':[],      ## line HWHM for self-emission-broadening
+            'elower':[],             ## energy of lower transition level (in cm^{-1})
+            'n_air':[],               ## temperature-dependent exponent for "gamma-air"
+            'delta_air':[],           ## air-pressure shift, in cm^{-1} / atm
             'Vp':[],              ## upper-state "global" quanta index
             'Vpp':[],             ## lower-state "global" quanta index
             'Qp':[],              ## upper-state "local" quanta index
             'Qpp':[],             ## lower-state "local" quanta index
-            'Ierr':[],            ## uncertainty indices
-            'Iref':[],            ## reference indices
-            'flag':[],            ## flag
+            'ierr1':[],            ## uncertainty indices
+            'ierr2':[],            ## uncertainty indices
+            'ierr3':[],            ## uncertainty indices
+            'ierr4':[],            ## uncertainty indices
+            'ierr5':[],            ## uncertainty indices
+            'ierr6':[],            ## uncertainty indices
+            'iref1':[],            ## reference indices
+            'iref2':[],            ## reference indices
+            'iref3':[],            ## reference indices
+            'iref4':[],            ## reference indices
+            'iref5':[],            ## reference indices
+            'iref6':[],            ## reference indices
+            'line_mixing_flag':[],            ## flag
             'gp':[],              ## statistical weight of the upper state
             'gpp':[]}             ## statistical weight of the lower state
 
@@ -840,33 +873,80 @@ def extract_HITRAN_from_par(filename):
         if (len(line) < 160):
             raise ImportError('The imported file ("' + filename + '") does not appear to be a HITRAN2012-format data file.')
 
-        data['M'].append(uint(line[0:2]))
-        data['I'].append(uint(line[2]))
-        data['linecenter'].append(float64(line[3:15]))
-        data['S'].append(float64(line[15:25]))
-        data['Acoeff'].append(float64(line[25:35]))
-        data['gamma-air'].append(float64(line[35:40]))
-        data['gamma-self'].append(float64(line[40:45]))
-        data['Epp'].append(float64(line[45:55]))
-        data['N'].append(float64(line[55:59]))
-        data['delta'].append(float64(line[59:67]))
-        data['Vp'].append(line[67:82])
-        data['Vpp'].append(line[82:97])
+        data['molec_id'].append(int(line[0:2]))
+        data['local_iso_id'].append(int(line[2]))
+        data['wn'].append(float32(line[3:15]))
+        data['sw'].append(float32(line[15:25]))
+        data['a'].append(float32(line[25:35]))
+        data['gamma_air'].append(float32(line[35:40]))
+        data['gamma_self'].append(float32(line[40:45]))
+        data['elower'].append(float32(line[45:55]))
+        data['n_air'].append(float32(line[55:59]))
+        data['delta_air'].append(float32(line[59:67]))
+        data['Vp'].append(float32(line[67:82]))
+        data['Vpp'].append(float32(line[82:97]))
         data['Qp'].append(line[97:112])
         data['Qpp'].append(line[112:127])
-        data['Ierr'].append(line[127:133])
-        data['Iref'].append(line[133:145])
-        data['flag'].append(line[145])
-        data['gp'].append(line[146:153])
-        data['gpp'].append(line[153:160])
+        data['ierr1'].append(line[127:133])
+        data['ierr2'].append(line[128:133])
+        data['ierr3'].append(line[129:133])
+        data['ierr4'].append(line[130:133])
+        data['ierr5'].append(line[131:133])
+        data['ierr6'].append(line[132:133])
+        data['iref1'].append(line[133:135])
+        data['iref2'].append(line[135:137])
+        data['iref3'].append(line[137:139])
+        data['iref4'].append(line[139:141])
+        data['iref5'].append(line[141:143])
+        data['iref6'].append(line[143:145])
+        data['line_mixing_flag'].append(line[145])
+        data['gp'].append(float32(line[146:153]))
+        data['gpp'].append(float32(line[153:160]))
+    
+    data=Table(data)  #convert to astropy table
+    data['nu']=data['wn']*c.cgs.value   #Now actually frequency of transition
+    data['eup_k']=(wn_to_k((data['wn']+data['elower'])/un.cm)).value      #upper level energy in Kelvin
+    data['wave']=1.e4/data['wn']       #Wavelength of transition, in microns
+
+
+    #Extract desired portion of dataset                                                                                 
+    ebool = np.full(np.size(data), True, dtype=bool)  #default to True                                                   
+    abool = np.full(np.size(data), True, dtype=bool)  #default to True                                                   
+    swbool = np.full(np.size(data), True, dtype=bool)  #default to True                                                 
+    vupbool = np.full(np.size(data), True, dtype=bool)  #default to True
+    waveminbool = np.full(np.size(data), True, dtype=bool)  #default to True
+    wavemaxbool = np.full(np.size(data), True, dtype=bool)  #default to True
+
+    #Isotope number
+    isobool = (data['local_iso_id'] == isotopologue_number)
+    #Upper level energy
+    if(eupmax is not None):
+        ebool = data['eup_k'] < eupmax
+    #Upper level A coeff
+    if(aupmin is not None):
+        abool = data['a'] > aupmin
+    #Line strength
+    if(swmin is not None):
+        swbool = data['sw'] > swmin
+    #Vup
+    if(vup is not None):
+        vupval = [np.int(val) for val in data['Vp']]
+        vupbool = (np.array(vupval)==vup)
+    #wavemin
+    if(wavemin is not None):
+        waveminbool=data['wave'] > wavemin
+    #wavemax
+    if(wavemax is not None):
+        wavemaxbool=data['wave'] < wavemax
+
+    #Combine
+    extractbool = (abool & ebool & swbool & vupbool &waveminbool & wavemaxbool & isobool)
+    hitran_data=data[extractbool]
 
     if filename.endswith('.zip'):
         zip.close()
     else:
         filehandle.close()
 
-    for key in data:
-        data[key] = np.array(data[key])
-
-    return(data)
+    return(hitran_data)
 
