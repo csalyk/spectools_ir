@@ -940,7 +940,7 @@ def extract_hitran_from_par(filename,wavemin=None,wavemax=None,isotopologue_numb
         wavemaxbool=data['wave'] < wavemax
 
     #Combine
-    extractbool = (abool & ebool & swbool & vupbool &waveminbool & wavemaxbool & isobool)
+    extractbool = (abool & ebool & swbool & vupbool & waveminbool & wavemaxbool & isobool)
     hitran_data=data[extractbool]
 
     if filename.endswith('.zip'):

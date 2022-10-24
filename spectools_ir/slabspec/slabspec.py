@@ -162,7 +162,7 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
         except:
             print("astroquery call to HITRAN failed. This can happen when your molecule does not have any lines in the requested wavelength region")
             sys.exit(1)
-           
+
     wn0=hitran_data['wn']*1e2 # now m-1
     aup=hitran_data['a']
     eup=(hitran_data['elower']+hitran_data['wn'])*1e2 #now m-1                                                             
