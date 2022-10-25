@@ -12,7 +12,7 @@ from .helpers import _strip_superfluous_hitran_data, _convert_quantum_strings
 from .helpers import _calc_numerical_flux
 
 def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=True,vet_fits=False,
-                plot=False,v_dop=0,amp=0.1,ymin=None,ymax=None):
+                plot=False,v_dop=0,amp=0.1,ymin=None,ymax=None,bounds=None):
     '''                                                                                     
                                                                                             
     Parameters                                                                              
@@ -44,6 +44,10 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
     v_dop : float, optional (defaults to 0)
         Doppler shift in km/s of spectrum relative to vacuum.  Note that this makes no assumptions about
          reference frame.
+    bounds : Lower and upper bounds on parameters.  Tuple where each element is an array with 
+           length 4, or single number.  Use np.inf to disable bounds on some parameters.
+           e.g., bounds=[[-np.inf,-np.inf,-np.inf,-1e-6],[np.inf,np.inf,np.inf,1e-6]] 
+           https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html
 
     Returns                                                                                 
     --------                                                                                
@@ -84,7 +88,7 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
             print('Not enough data near ', w0+wdop, ' microns. Skipping.')
             goodfit_bool[i]=False
         if(len(myx) > 5):
-            g=_line_fit(np.array(myx),np.array(myy),nterms=4,p0=[amp,w0+wdop,sig_w,cont])
+            g=_line_fit(np.array(myx),np.array(myy),nterms=4,p0=[amp,w0+wdop,sig_w,cont],bounds=bounds)
             if(g!=-1):   #curve fit succeeded
                 p=g['parameters']
                 perr=g['parameter_errors']
