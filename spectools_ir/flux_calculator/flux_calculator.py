@@ -72,6 +72,10 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
     lineflux_data['v_dop_fit_err']=np.zeros(nlines)  
     lineflux_data['continuum']=np.zeros(nlines)  
     lineflux_data['continuum_err']=np.zeros(nlines)  
+    lineflux_data['wave_fit']=np.zeros(nlines)  
+    lineflux_data['wave_fit_err']=np.zeros(nlines)  
+    lineflux_data['amp_fit']=np.zeros(nlines)  
+    lineflux_data['amp_fit_err']=np.zeros(nlines)  
     goodfit_bool=[True]*nlines
     #Loop through HITRAN wavelengths
     for i,w0 in enumerate(lineflux_data['wave']):   
@@ -105,6 +109,12 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
                 lineflux_data['v_dop_fit_err'][i]=(perr[1])/w0*c.value*1e-3   #km/s
                 lineflux_data['continuum'][i]=(p[3])   #Jy
                 lineflux_data['continuum_err'][i]=(perr[3])   #Jy
+
+                lineflux_data['wave_fit'][i]=p[1] #microns
+                lineflux_data['wave_fit_err'][i]=perr[1] #microns
+                lineflux_data['amp_fit'][i]=p[0] #Jy
+                lineflux_data['amp_fit_err'][i]=perr[0] #Jy
+                
 
                 if(plot==True):
                     fig=plt.figure(figsize=(10,3))
@@ -160,6 +170,10 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
     lineflux_data['v_dop_fit_err'].unit = 'km / s'
     lineflux_data['continuum'].unit = 'Jy'
     lineflux_data['continuum_err'].unit = 'Jy'
+    lineflux_data['amp_fit'].unit = 'Jy'
+    lineflux_data['amp_fit_err'].unit = 'Jy'
+    lineflux_data['wave_fit'].unit = 'micron'
+    lineflux_data['wave_fit_err'].unit = 'micron'
 
     lineflux_data=lineflux_data[goodfit_bool]
 
