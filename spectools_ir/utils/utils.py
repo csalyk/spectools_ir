@@ -6,7 +6,7 @@ from astroquery.hitran import Hitran
 
 from astropy import units as un
 from astropy.constants import c, k_B, h, u
-from astropy.convolution import Gaussian1DKernel, convolve
+from astropy.convolution import Gaussian1DKernel, convolve_fft
 from astropy.table import Table
 
 import matplotlib.pyplot as plt
@@ -14,22 +14,22 @@ import matplotlib as matplotlib
 import sys as sys
 
 def make_rotation_diagram(lineparams, units='mks', fluxkey='lineflux'):
-    '''                                                                                                     
-    Take ouput of make_spec and use it to compute rotation diagram parameters.                              
-                                                                                                            
-    Parameters                                                                                              
-    ---------                                                                                               
-    lineparams: dictionary                                                                                  
-        dictionary output from make_spec                                                                    
+    '''
+    Take ouput of make_spec and use it to compute rotation diagram parameters.
+
+    Parameters
+    ---------
+    lineparams: dictionary
+        dictionary output from make_spec
     units : string, optional
         either 'mks', 'cgs' or 'mixed' (all mks, but wavenumber in cm-1)
     fluxkey : string, optional
         name of column in lineparams holding the line flux data
 
-    Returns                                                                                                 
-    --------                                                                                                
-    rot_table: astropy Table                                                                                
-        Table of x and y values for rotation diagram.                                                                                                             
+    Returns
+    --------
+    rot_table: astropy Table
+        Table of x and y values for rotation diagram.
     '''
 
     if('gup' in lineparams.columns):
@@ -116,7 +116,7 @@ def sigma_to_fwhm(sigma):
     ----------
     fwhm : float
        Full Width at Half Maximum of Gaussian distribution
-    '''                        
+    '''
     return  sigma*(2.*np.sqrt(2.*np.log(2.)))
 
 def fwhm_to_sigma(fwhm):
@@ -132,12 +132,12 @@ def fwhm_to_sigma(fwhm):
     ----------
     sigma : float
        sigma of Gaussian distribution
-    '''                        
+    '''
 
     return fwhm/(2.*np.sqrt(2.*np.log(2.)))
 
 def wn_to_k(wn):
-    '''                        
+    '''
     Convert wavenumber to Kelvin
 
     Parameters
@@ -150,21 +150,21 @@ def wn_to_k(wn):
     energy : AstroPy quantity
        Energy of photon with given wavenumber
 
-    '''              
+    '''
     return wn.to(1/un.m)*h*c/k_B
 
 def extract_hitran_data(molecule_name, wavemin, wavemax, isotopologue_number=1, eupmax=None, aupmin=None,swmin=None,vup=None):
-    '''                                                               
-    Extract data from HITRAN 
+    '''
+    Extract data from HITRAN
     Primarily makes use of astroquery.hitran, with some added functionality specific to common IR spectral applications
-    Parameters 
-    ---------- 
+    Parameters
+    ----------
     molecule_name : string
         String identifier for molecule, for example, 'CO', or 'H2O'
     wavemin: float
         Minimum wavelength of extracted lines (in microns)
     wavemax: float
-        Maximum wavelength of extracted lines (in microns)                   
+        Maximum wavelength of extracted lines (in microns)
     isotopologue_number : float, optional
         Number representing isotopologue (1=most common, 2=next most common, etc.)
     eupmax : float, optional
@@ -177,7 +177,7 @@ def extract_hitran_data(molecule_name, wavemin, wavemax, isotopologue_number=1, 
         Can be used to selet upper level energy.  Note: only works if 'Vp' string is a single number.
 
     Returns
-    ------- 
+    -------
     hitran_data : astropy table
         Extracted data
     '''
@@ -207,7 +207,7 @@ def extract_hitran_data(molecule_name, wavemin, wavemax, isotopologue_number=1, 
     ebool = np.full(np.size(tbl), True, dtype=bool)  #default to True
     abool = np.full(np.size(tbl), True, dtype=bool)  #default to True
     swbool = np.full(np.size(tbl), True, dtype=bool)  #default to True
-    vupbool = np.full(np.size(tbl), True, dtype=bool)  #default to True                                                            
+    vupbool = np.full(np.size(tbl), True, dtype=bool)  #default to True
     #Upper level energy
     if(eupmax is not None):
         ebool = tbl['eup_k'] < eupmax
@@ -229,21 +229,21 @@ def extract_hitran_data(molecule_name, wavemin, wavemax, isotopologue_number=1, 
     return hitran_data
 
 def get_global_identifier(molecule_name,isotopologue_number=1):
-    '''                                                                                                                                
+    '''
     For a given input molecular formula, return the corresponding HITRAN *global* identifier number.
-    For more info, see https://hitran.org/docs/iso-meta/ 
-                                                                                                                                       
-    Parameters                                                                                                                         
-    ----------                                                                                                                         
-    molecular_formula : str                                                                                                            
-        The string describing the molecule.              
+    For more info, see https://hitran.org/docs/iso-meta/
+
+    Parameters
+    ----------
+    molecular_formula : str
+        The string describing the molecule.
     isotopologue_number : int, optional
-        The isotopologue number, from most to least common.                                                                              
-                                                                                                                                       
-    Returns                                                                                                                            
-    -------                                                                                                                            
-    G : int                                                                                                                            
-        The HITRAN global identifier number.                                                                                        
+        The isotopologue number, from most to least common.
+
+    Returns
+    -------
+    G : int
+        The HITRAN global identifier number.
     '''
 
     mol_isot_code=molecule_name+'_'+str(isotopologue_number)
@@ -299,7 +299,7 @@ def get_global_identifier(molecule_name,isotopologue_number=1):
                'C2N2_1':123,
                'COCl2_1':124,'COCl2_2':125,'SiO_1':200}
  #SiO is not in HITRAN, so I just assigned it 200
- 
+
     try:
         return trans[mol_isot_code]
     except KeyError:
@@ -309,18 +309,18 @@ def get_global_identifier(molecule_name,isotopologue_number=1):
 #Code from Nathan Hagen
 #https://github.com/nzhagen/hitran
 def translate_molecule_identifier(M):
-    '''                                                                                                            
-    For a given input molecule identifier number, return the corresponding molecular formula.                      
-                                                                                                                   
-    Parameters                                                                                                     
-    ----------                                                                                                     
-    M : int                                                                                                        
-        The HITRAN molecule identifier number.                                                                     
-                                                                                                                   
-    Returns                                                                                                        
-    -------                                                                                                        
-    molecular_formula : str                                                                                        
-        The string describing the molecule.                                                                        
+    '''
+    For a given input molecule identifier number, return the corresponding molecular formula.
+
+    Parameters
+    ----------
+    M : int
+        The HITRAN molecule identifier number.
+
+    Returns
+    -------
+    molecular_formula : str
+        The string describing the molecule.
     '''
 
     trans = { '1':'H2O',    '2':'CO2',   '3':'O3',      '4':'N2O',   '5':'CO',    '6':'CH4',   '7':'O2',     '8':'NO',
@@ -334,18 +334,18 @@ def translate_molecule_identifier(M):
 #Code from Nathan Hagen
 #https://github.com/nzhagen/hitran
 def get_molecule_identifier(molecule_name):
-    '''                                                                                                                                
-    For a given input molecular formula, return the corresponding HITRAN molecule identifier number.                                   
-                                                                                                                                       
-    Parameters                                                                                                                         
-    ----------                                                                                                                         
-    molecular_formula : str                                                                                                            
-        The string describing the molecule.                                                                                            
-                                                                                                                                       
-    Returns                                                                                                                            
-    -------                                                                                                                            
-    M : int                                                                                                                            
-        The HITRAN molecular identifier number.                                                                                        
+    '''
+    For a given input molecular formula, return the corresponding HITRAN molecule identifier number.
+
+    Parameters
+    ----------
+    molecular_formula : str
+        The string describing the molecule.
+
+    Returns
+    -------
+    M : int
+        The HITRAN molecular identifier number.
     '''
 
     trans = { '1':'H2O',    '2':'CO2',   '3':'O3',      '4':'N2O',   '5':'CO',    '6':'CH4',   '7':'O2',     '8':'NO',
@@ -355,7 +355,7 @@ def get_molecule_identifier(molecule_name):
              '33':'HO2',   '34':'O',    '35':'ClONO2', '36':'NO+',  '37':'HOBr', '38':'C2H4', '39':'CH3OH', '40':'CH3Br',
              '41':'CH3CN', '42':'CF4',  '43':'C4H2',   '44':'HC3N', '45':'H2',   '46':'CS',   '47':'SO3'}
 
-    ## Invert the dictionary.                                                                                                          
+    ## Invert the dictionary.
     trans = {v:k for k,v in trans.items()}
     return(int(trans[molecule_name]))
 
@@ -376,146 +376,113 @@ def _check_hitran(molecule_name):
     else:
         return None
 
-def spec_convol(wave, flux, dv):
-    '''                                                                                                             
-    Convolve a spectrum, given wavelength in microns and flux density, by a given FWHM in velocity                  
-                                                                                                                    
-    Parameters                                                                                                      
-    ---------                                                                                                       
-    wave : numpy array                                                                                              
-        wavelength values, in microns                                                                               
-    flux : numpy array                                                                                              
-        flux density values, in units of Energy/area/time/Hz                                                        
-    dv : float                                                                                                      
-        FWHM of Gaussian convolution kernel, in km/s                                                                         
-                                                                                                                    
-    Returns                                                                                                         
-    --------                                                                                                        
-    newflux : numpy array                                                                                           
-        Convolved spectrum flux density values, in same units as input                                              
-                                                                                                                    
+def spec_convol(wave,flux,dv):
     '''
+    Convolve a spectrum, given wavelength in microns and flux density, by a given resolving power
 
-#Program assumes units of dv are km/s, and dv=FWHM                                                                 \
-                                                                                                                    
-    dv=fwhm_to_sigma(dv)
-    n=round(4.*dv/(c.value*1e-3)*np.median(wave)/(wave[1]-wave[0]))
-    if (n < 10):
-        n=10.
+    Parameters
+    ---------
+    wave : numpy array
+        wavelength values, in microns
+    flux : numpy array
+        flux density values, in units of Energy/area/time/Hz
+    dv : float
+        Resolving power in km/s
 
-#Pad arrays to deal with edges                                                                                     \
+    Returns
+    --------
+    newflux : numpy array
+        Convolved spectrum flux density values, in same units as input
 
-    dwave=wave[1]-wave[0]
-    wave_low=np.arange(wave[0]-dwave*n, wave[0]-dwave, dwave)
-    wave_high=np.arange(np.max(wave)+dwave, np.max(wave)+dwave*(n-1.), dwave)
-    nlow=np.size(wave_low)
-    nhigh=np.size(wave_high)
-    flux_low=np.zeros(nlow)
-    flux_high=np.zeros(nhigh)
-    mask_low=np.zeros(nlow)
-    mask_high=np.zeros(nhigh)
-    mask_middle=np.ones(np.size(wave))
-    wave=np.concatenate([wave_low, wave, wave_high])
-    flux=np.concatenate([flux_low, flux, flux_high])
-    mask=np.concatenate([mask_low, mask_middle, mask_high])
-
-    newflux=np.copy(flux)
-
-    if( n > (np.size(wave)-n)):
-        print("Your wavelength range is too small for your kernel")
-        print("Program will return an empty array")
-
-    for i in np.arange(n, np.size(wave)-n+1):
-        lwave=wave[np.int(i-n):np.int(i+n+1)]
-        lflux=flux[np.int(i-n):np.int(i+n+1)]
-        lvel=(lwave-wave[np.int(i)])/wave[np.int(i)]*c.value*1e-3
-#        nvel=(np.max(lvel)-np.min(lvel))/(dv*.2) +3
-#        vel=np.arange(nvel)
-#        vel=.2*dv*(vel-np.median(vel))
-        wkernel=markgauss(lvel,mean=0,sigma=dv,area=1.)
-#        wkernel=np.interp(lvel,vel,kernel)                 
-        wkernel=wkernel/np.nansum(wkernel)
-        newflux[np.int(i)]=np.nansum(lflux*wkernel)/np.nansum(wkernel[np.isfinite(lflux)])
-        #Note: denominator is necessary to correctly account for NaN'd regions                                     \
-                                                                                                                    
-
-#Remove NaN'd regions                                                                                              \
-                                                                                                                    
-    nanbool=np.invert(np.isfinite(flux))   #Places where flux is not finite                                        \
-                                                                                                                    
-    newflux[nanbool]='NaN'
-
-#Now remove padding                                                                                                \
-                                                                                                                    
-    newflux=newflux[mask==1]
-
-    return newflux
-
-def spec_convol_R(wave, flux, R):
-    '''                                                                                                                        
-    Convolve a spectrum, given wavelength in microns and flux density, by a given wavelength-dependent R                             
-                                                                                                                               
-    Parameters                                                                                                                 
-    ---------                                                                                                                  
-    wave : numpy array                                                                                                         
-        wavelength values, in microns                                                                                          
-    flux : numpy array                                                                                                         
-        flux density values, in units of Energy/area/time/Hz                                                                   
-    R : numpy array                                                                                                                  
-        Resolving power (lambda / dlambda)                                                                                     
-                                                                                                                               
-    Returns                                                                                                                    
-    --------                                                                                                                   
-    newflux : numpy array                                                                                                      
-        Convolved spectrum flux density values, in same units as input                                                         
-                                                                                                                               
     '''
-    # find the minimum spacing between wavelengths in the dataset                                                              
+    R = c.value/(dv*1e3) #input dv in km/s, convert to m/s
+    # find the minimum spacing between wavelengths in the dataset
     dws = np.abs(wave - np.roll(wave, 1))
-    dw_min = np.min(dws)   #Minimum delta-wavelength between points in dataset                                                 
+    dw_min = np.min(dws)   #Minimum delta-wavelength between points in dataset
 
-    fwhm = wave / R  # FWHM of resolution element as a function of wavelength ("delta lambda" in same units as wave)           
-    #fwhm / dw_min gives FWHM values expressed in units of minimum spacing, or the sampling for each wavelength                
-    #(sampling is sort of the number of data points per FWHM)                                                                  
-    #The sampling is different for each point in the wavelength array, because the FWHM is wavelength dependent                
-    #fwhm_s then gives the minimum value of the sampling - the most poorly sampled wavelength.                                 
-    fwhm_s = np.min(fwhm / dw_min)  # find mininumvalue of sampling for this dataset                                           
-    # but do not allow the sampling FWHM to be less than Nyquist                                                               
-    # (i.e., make sure there are at least two points per resolution element)                                                   
-    fwhm_s = np.max([2., fwhm_s])  #Will return 2 only if fwhm_s is less than 2                                                
-    #If you want all wavelengths to have the same sampling per resolution element,                                             
-    #then this ds gives the wavelength spacing for each wavelength (in units of wavelength)                                    
+    fwhm = wave / R  # FWHM of resolution element as a function of wavelength ("delta lambda" in same units as wave)
+    #fwhm / dw_min gives FWHM values expressed in units of minimum spacing, or the sampling for each wavelength
+    #(sampling is sort of the number of data points per FWHM)
+    #The sampling is different for each point in the wavelength array, because the FWHM is wavelength dependent
+    #fwhm_s then gives the minimum value of the sampling - the most poorly sampled wavelength.
+    fwhm_s = np.min(fwhm / dw_min)  # find mininumvalue of sampling for this dataset
+    # but do not allow the sampling FWHM to be less than Nyquist
+    # (i.e., make sure there are at least two points per resolution element)
+    fwhm_s = np.max([2., fwhm_s])  #Will return 2 only if fwhm_s is less than 2
+    #If you want all wavelengths to have the same sampling per resolution element,
+    #then this ds gives the wavelength spacing for each wavelength (in units of wavelength)
     ds = fwhm / fwhm_s
-    # use the min wavelength as a starting point                                                                               
-    w = np.min(wave)
-    #Initialize array to hold new wavelength values                                                                            
-    #Note: it's much faster (~50%) to append to lists than np.array()'s                                                        
-    wave_constfwhm = []
 
+    wave_constfwhm = np.cumsum(ds)+np.min(wave)
 
-    # doing this as a loop is slow, but straightforward.                                                                       
-    while w < np.max(wave):
-        # use interpolation to get delta-wavelength from the sampling as a function of wavelength.                             
-        # this method is over 5x faster than the original use of scipy.interpolate.interp1d.                                   
-        w += np.interp(w,wave,ds)  #Get value of ds at w, then add to old value of w                                           
-        wave_constfwhm.append(w)
-
-    wave_constfwhm.pop()  # remove last point which is an extrapolation                                                        
-    wave_constfwhm = np.array(wave_constfwhm)  #Convert list to numpy array                                                    
-
-    # interpolate the flux onto the new wavelength set                                                                         
+    # interpolate the flux onto the new wavelength set
     flux_constfwhm = np.interp(wave_constfwhm,wave,flux)
 
-    # convolve the flux with a gaussian kernel; first convert the FWHM to sigma                                                
+    # convolve the flux with a gaussian kernel; first convert the FWHM to sigma
     sigma_s = fwhm_s / 2.3548
     try:
-        # for astropy < 0.4                                                                                                    
+        # for astropy < 0.4
         g = Gaussian1DKernel(width=sigma_s)
     except TypeError:
-        # for astropy >= 0.4                                                                                                   
+        # for astropy >= 0.4
         g = Gaussian1DKernel(sigma_s)
-    # use boundary='extend' to set values outside the array to nearest array value.                                            
-    # this is the best approximation in this case.                                                                             
+    # use boundary='extend' to set values outside the array to nearest array value.
+    # this is the best approximation in this case.
+    flux_conv = convolve_fft(flux_constfwhm, g, normalize_kernel=True, boundary='fill')
+    flux_oldsampling = np.interp(wave, wave_constfwhm, flux_conv)
+
+    return flux_oldsampling
+
+def spec_convol_R(wave, flux, R):
+    '''
+    Convolve a spectrum, given wavelength in microns and flux density, by a given wavelength-dependent R
+
+    Parameters
+    ---------
+    wave : numpy array
+        wavelength values, in microns
+    flux : numpy array
+        flux density values, in units of Energy/area/time/Hz
+    dv : numpy array
+        Resolving power in km/s
+
+    Returns
+    --------
+    newflux : numpy array
+        Convolved spectrum flux density values, in same units as input
+
+    '''
+    # find the minimum spacing between wavelengths in the dataset
+    dws = np.abs(wave - np.roll(wave, 1))
+    dw_min = np.min(dws)   #Minimum delta-wavelength between points in dataset
+
+    fwhm = wave / R  # FWHM of resolution element as a function of wavelength ("delta lambda" in same units as wave)
+    #fwhm / dw_min gives FWHM values expressed in units of minimum spacing, or the sampling for each wavelength
+    #(sampling is sort of the number of data points per FWHM)
+    #The sampling is different for each point in the wavelength array, because the FWHM is wavelength dependent
+    #fwhm_s then gives the minimum value of the sampling - the most poorly sampled wavelength.
+    fwhm_s = np.min(fwhm / dw_min)  # find mininumvalue of sampling for this dataset
+    # but do not allow the sampling FWHM to be less than Nyquist
+    # (i.e., make sure there are at least two points per resolution element)
+    fwhm_s = np.max([2., fwhm_s])  #Will return 2 only if fwhm_s is less than 2
+    #If you want all wavelengths to have the same sampling per resolution element,
+    #then this ds gives the wavelength spacing for each wavelength (in units of wavelength)
+    ds = fwhm / fwhm_s
+
+    wave_constfwhm = np.cumsum(ds)+np.min(wave)
+    # interpolate the flux onto the new wavelength set
+    flux_constfwhm = np.interp(wave_constfwhm,wave,flux)
+
+    # convolve the flux with a gaussian kernel; first convert the FWHM to sigma
+    sigma_s = fwhm_s / 2.3548
+    try:
+        # for astropy < 0.4
+        g = Gaussian1DKernel(width=sigma_s)
+    except TypeError:
+        # for astropy >= 0.4
+        g = Gaussian1DKernel(sigma_s)
+    # use boundary='extend' to set values outside the array to nearest array value.
+    # this is the best approximation in this case.
     flux_conv = convolve(flux_constfwhm, g, normalize_kernel=True, boundary='extend')
     flux_oldsampling = np.interp(wave, wave_constfwhm, flux_conv)
 
@@ -524,28 +491,28 @@ def spec_convol_R(wave, flux, R):
 
 def get_molmass(molecule_name,isotopologue_number=1):
     '''                                                                                                                          \
-                                                                                                                                  
-    For a given input molecular formula, return the corresponding molecular mass, in amu                                          
+
+    For a given input molecular formula, return the corresponding molecular mass, in amu
                                                                                                                                  \
-                                                                                                                                  
+
     Parameters                                                                                                                   \
-                                                                                                                                  
+
     ----------                                                                                                                   \
-                                                                                                                                  
+
     molecular_formula : str                                                                                                      \
-        The string describing the molecule.                                                                                       
-    isotopologue_number : int, optional                                                                                           
+        The string describing the molecule.
+    isotopologue_number : int, optional
         The isotopologue number, from most to least common.                                                                      \
-                                                                                                                                  
+
     Returns                                                                                                                      \
-                                                                                                                                  
+
     -------                                                                                                                      \
     mu : float                                                                                                                   \
-        Molecular mass in amu                                                                                                     
+        Molecular mass in amu
     '''
 
     mol_isot_code=molecule_name+'_'+str(isotopologue_number)
-#https://hitran.org/docs/iso-meta/                                                                                                
+#https://hitran.org/docs/iso-meta/
 
     mass = { 'H2O_1':18.010565, 'H2O_2':20.014811, 'H2O_3':19.01478, 'H2O_4':19.01674,
                'H2O_5':21.020985, 'H2O_6':20.020956, 'H2O_7':20.022915,
@@ -605,28 +572,28 @@ def get_molmass(molecule_name,isotopologue_number=1):
 
 
 def get_miri_mrs_resolution(subband, wavelength):
-    '''                                                                                                                        
-    Retrieve approximate MIRI MRS spectral resolution given a wavelength                                                       
-                                                                                                                               
-    Parameters                                                                                                                 
-                                                                                                                               
-    ---------                                                                                                                  
-    subband: string                                                                                                            
-      Subband (1A, 1B, ...4C)                                                                                                  
-                                                                                                                               
-    wavelength: float                                                                                                          
-      Wavelength in microns                                                                                                    
-                                                                                                                               
-    Returns                                                                                                                    
-                                                                                                                               
-    ---------                                                                                                                  
-    R: float                                                                                                                   
-      Spectral resolution                                                                                                      
-                                                                                                                               
+    '''
+    Retrieve approximate MIRI MRS spectral resolution given a wavelength
+
+    Parameters
+
+    ---------
+    subband: string
+      Subband (1A, 1B, ...4C)
+
+    wavelength: float
+      Wavelength in microns
+
+    Returns
+
+    ---------
+    R: float
+      Spectral resolution
+
     '''
     wavelength=np.array(wavelength)
 
-    #Define spectral resolution dictionaries.  Table 1 of Wells et al. MIRI paper                                              
+    #Define spectral resolution dictionaries.  Table 1 of Wells et al. MIRI paper
     w0={
         "1A":4.87,
         "1B":5.62,
@@ -780,7 +747,7 @@ def make_miri_mrs_figure(figsize=(5,5)):
 
     x_4c=np.linspace(23.84,28.82,num=50)
     y_4c = [get_miri_mrs_resolution('4C',myx) for myx in x_4c]
-   
+
     fig=plt.figure(figsize=figsize)
     ax1=fig.add_subplot(111)
     ax1.plot(x_1a,y_1a,label='1A')
@@ -807,9 +774,9 @@ def make_miri_mrs_figure(figsize=(5,5)):
     plt.show()
     return
 
-#Modification of code from Nathan Hagen 
-#https://github.com/nzhagen/hitran  
-def extract_hitran_from_par(filename,wavemin=None,wavemax=None,isotopologue_number=1,eupmax=None,aupmin=None,swmin=None,vup=None): 
+#Modification of code from Nathan Hagen
+#https://github.com/nzhagen/hitran
+def extract_hitran_from_par(filename,wavemin=None,wavemax=None,isotopologue_number=1,eupmax=None,aupmin=None,swmin=None,vup=None):
     '''
     Given a HITRAN2012-format text file, read in the parameters of the molecular absorption features.
 
@@ -823,7 +790,7 @@ def extract_hitran_from_par(filename,wavemin=None,wavemax=None,isotopologue_numb
     data : astropy table
         The table of HITRAN data for the molecule
     ----
-  
+
     '''
     if not os.path.exists:
         raise ImportError('The input filename"' + filename + '" does not exist.')
@@ -902,17 +869,17 @@ def extract_hitran_from_par(filename,wavemin=None,wavemax=None,isotopologue_numb
         data['line_mixing_flag'].append(line[145])
         data['gp'].append(float32(line[146:153]))
         data['gpp'].append(float32(line[153:160]))
-    
+
     data=Table(data)  #convert to astropy table
     data['nu']=data['wn']*c.cgs.value   #Now actually frequency of transition
     data['eup_k']=(wn_to_k((data['wn']+data['elower'])/un.cm)).value      #upper level energy in Kelvin
     data['wave']=1.e4/data['wn']       #Wavelength of transition, in microns
 
 
-    #Extract desired portion of dataset                                                                                 
-    ebool = np.full(np.size(data), True, dtype=bool)  #default to True                                                   
-    abool = np.full(np.size(data), True, dtype=bool)  #default to True                                                   
-    swbool = np.full(np.size(data), True, dtype=bool)  #default to True                                                 
+    #Extract desired portion of dataset
+    ebool = np.full(np.size(data), True, dtype=bool)  #default to True
+    abool = np.full(np.size(data), True, dtype=bool)  #default to True
+    swbool = np.full(np.size(data), True, dtype=bool)  #default to True
     vupbool = np.full(np.size(data), True, dtype=bool)  #default to True
     waveminbool = np.full(np.size(data), True, dtype=bool)  #default to True
     wavemaxbool = np.full(np.size(data), True, dtype=bool)  #default to True
@@ -949,4 +916,3 @@ def extract_hitran_from_par(filename,wavemin=None,wavemax=None,isotopologue_numb
         filehandle.close()
 
     return(hitran_data)
-
