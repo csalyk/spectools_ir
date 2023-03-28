@@ -260,7 +260,6 @@ class LineData():
             qdata = pd.read_csv(handle,sep=' ',skipinitialspace=True,names=['temp','q'],header=None)
             q_dict.update({str(myid):qdata['q']})
         return q_dict
-
 #------------------------------------------------------------------------------------                                     
     def rot_diagram(self,units='mks',modelfluxes=None):
         x=self.eup_k

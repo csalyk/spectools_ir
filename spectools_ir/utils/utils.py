@@ -40,11 +40,13 @@ def make_rotation_diagram(lineparams, units='mks', fluxkey='lineflux'):
 
     x=lineparams['eup_k']
     y=np.log(lineparams[fluxkey]/(lineparams['wn']*1e2*gup*lineparams['a']))   #All mks
+    dy=lineparams['lineflux_err']/lineparams[fluxkey]
+
     if(units=='cgs'):
         y=np.log(1000.*lineparams[fluxkey]/(lineparams['wn']*gup*lineparams['a'])) #All cgs
     if(units=='mixed'):
         y=np.log(lineparams[fluxkey]/(lineparams['wn']*gup*lineparams['a'])) #Mixed units
-    rot_dict={'x':x,'y':y,'units':units}
+    rot_dict={'x':x,'y':y,'yerr':dy,'units':units}
 
     return rot_dict
 

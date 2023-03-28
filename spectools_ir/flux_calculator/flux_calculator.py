@@ -92,9 +92,11 @@ def calc_fluxes(wave,flux,hitran_data, fwhm_v=20., sep_v=40.,cont=1.,verbose=Tru
             print('Not enough data near ', w0+wdop, ' microns. Skipping.')
             goodfit_bool[i]=False
         if(len(myx) > 5):
+            print('Starting params:',amp,w0+wdop,sig_w,cont)
             g=_line_fit(np.array(myx),np.array(myy),nterms=4,p0=[amp,w0+wdop,sig_w,cont],bounds=bounds)
             if(g!=-1):   #curve fit succeeded
                 p=g['parameters']
+                print('Fit params:', p[0],p[1],p[2],p[3])
                 perr=g['parameter_errors']
                 resid=g['resid']
                 sigflux=np.sqrt(np.mean(resid**2.))
