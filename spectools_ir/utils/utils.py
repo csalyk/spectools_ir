@@ -483,7 +483,7 @@ def spec_convol_R(wave, flux, R):
         g = Gaussian1DKernel(sigma_s)
     # use boundary='extend' to set values outside the array to nearest array value.
     # this is the best approximation in this case.
-    flux_conv = convolve(flux_constfwhm, g, normalize_kernel=True, boundary='extend')
+    flux_conv = convolve_fft(flux_constfwhm, g, normalize_kernel=True, boundary='fill')
     flux_oldsampling = np.interp(wave, wave_constfwhm, flux_conv)
 
     return flux_oldsampling

@@ -18,7 +18,7 @@ from spectools_ir.utils import get_molecule_identifier, get_global_identifier, s
 from .helpers import _strip_superfluous_hitran_data, _convert_quantum_strings
 
 #------------------------------------------------------------------------------------
-def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, deltav=None, isotopologue_number=1, d_pc=1,
+def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, deltav=None, isotopologue_number=1, d_pc=1,
               aupmin=None, convol_fwhm=None, eupmax=None, vup=None, swmin=None, parfile=None):
 
     '''
@@ -51,9 +51,6 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
         Minimum line strength for transitions
     convol_fwhm : float, optional
         FWHM of convolution kernel, in km/s.
-    res : float, optional
-        max resolution of spectrum, in microns.  Must be significantly higher than observed spectrum for correct calculation.
-        Defaults to 1e-4.
     eupmax : float, optional
         Maximum energy of transitions to consider, in K
     vup : float, optional
@@ -85,9 +82,6 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     #If local velocity field is not given, assume sigma given by thermal velocity
     if(deltav is None):
         deltav = compute_thermal_velocity(molecule_name, temp)
-
-    #Internal resolving power needed to resolve deltav
-    res = oversamp*c.value/deltav
 
     #Read HITRAN data
     if(parfile is not None):
@@ -134,7 +128,7 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     #Now interpolate over wavelength space so that all lines can be added together
     w_arr = wave            #nlines x nvel
     f_arr = w_arr-w_arr     #nlines x nvel
-    nbins = int(oversamp*wmax/(wmax-wmin)*(c.value/deltav))
+    nbins = int(oversamp*(wmax-wmin)/wmax*(c.value/deltav))
 
     #Create arrays to hold full spectrum (optical depth vs. wavelength)
     totalwave = np.logspace(np.log10(wmin),np.log10(wmax),nbins)
@@ -195,15 +189,15 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, res=1e-4, delta
     #Model params
     if(convol_fwhm is not None):
         convol_fwhm=convol_fwhm*un.km/un.s
-    modelparams_table={'area':area*un.meter*un.meter,'temp':temp*un.K,'n_col':n_col/un.meter/un.meter, 'res':res*un.micron,
+    modelparams_table={'area':area*un.meter*un.meter,'temp':temp*un.K,'n_col':n_col/un.meter/un.meter, 
                        'deltav':deltav*un.meter/un.s, 'convol_fwhm':convol_fwhm, 'd_pc':d_pc*un.parsec,
                        'isotopologue_number':isot,'molecule_name':molecule_name}
     slabdict['modelparams'] = modelparams_table
 
     #Line-by-line data
-    hitran_data['tau0'] = tau0
-    hitran_data['lineflux'] = lineflux
-    slabdict['moldata'] = hitran_data
+#    hitran_data['tau0'] = tau0
+#    hitran_data['lineflux'] = lineflux
+#    slabdict['moldata'] = hitran_data
 
     return slabdict
 
@@ -268,7 +262,7 @@ def write_slab(slabdict,filename='slabmodel.fits'):
     c2 = fits.Column(name='flux', array=flux, format='F')
     t1 = fits.BinTableHDU.from_columns([c1, c2])
 
-    moldata = slabdict['moldata']
+    moldata = slabdict['lineparams']
     mol_cols = []
     for key in moldata.keys():
         try:
