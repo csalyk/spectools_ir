@@ -120,7 +120,7 @@ class Retrieval():
         #sampler.chain has dimensions (Nwalkers, Nburnin+Nsamples,ndims)
 #        samples = sampler.chain[:, Nburnin:, :].reshape((-1, ndims))  
 
-        return sampler.chain
+        return sampler
 
     def _lnprior(self, theta):
         lp = 0.  #initialize log prior

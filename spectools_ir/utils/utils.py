@@ -31,7 +31,6 @@ def make_rotation_diagram(lineparams, units='mks', fluxkey='lineflux'):
     rot_table: astropy Table
         Table of x and y values for rotation diagram.
     '''
-
     if('gup' in lineparams.columns):
         gup=lineparams['gup']
 
@@ -44,7 +43,11 @@ def make_rotation_diagram(lineparams, units='mks', fluxkey='lineflux'):
         y=np.log(1000.*lineparams[fluxkey]/(lineparams['wn']*gup*lineparams['a'])) #All cgs
     if(units=='mixed'):
         y=np.log(lineparams[fluxkey]/(lineparams['wn']*gup*lineparams['a'])) #Mixed units
-    rot_dict={'x':x,'y':y,'units':units}
+    if ('lineflux_err' in lineparams.columns):
+        dy=lineparams['lineflux_err']/lineparams[fluxkey]
+        rot_dict={'x':x,'y':y,'yerr':dy,'units':units}
+    else: 
+        rot_dict={'x':x,'y':y,'units':units}
 
     return rot_dict
 
@@ -481,7 +484,6 @@ def spec_convol_R(wave, flux, R):
     except TypeError:
         # for astropy >= 0.4
         g = Gaussian1DKernel(sigma_s)
-    # use boundary='extend' to set values outside the array to nearest array value.
     # this is the best approximation in this case.
     flux_conv = convolve_fft(flux_constfwhm, g, normalize_kernel=True, boundary='fill')
     flux_oldsampling = np.interp(wave, wave_constfwhm, flux_conv)

@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import urllib
 import pandas as pd
+import pdb as pdb
 
 from scipy.interpolate import interp1d
 
@@ -131,7 +132,7 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, deltav=None, is
     nbins = int(oversamp*(wmax-wmin)/wmax*(c.value/deltav))
 
     #Create arrays to hold full spectrum (optical depth vs. wavelength)
-    totalwave = np.logspace(np.log10(wmin),np.log10(wmax),nbins)
+    totalwave = np.logspace(np.log10(wmin-10*deltav/c.value*wmax),np.log10(wmax+10*deltav/c.value*wmax),nbins) #Extend beyond input wave by 10xdelta_wave
     totaltau = np.zeros(nbins)
 
     #Create array to hold line fluxes (one flux value per line)
@@ -193,11 +194,6 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, deltav=None, is
                        'deltav':deltav*un.meter/un.s, 'convol_fwhm':convol_fwhm, 'd_pc':d_pc*un.parsec,
                        'isotopologue_number':isot,'molecule_name':molecule_name}
     slabdict['modelparams'] = modelparams_table
-
-    #Line-by-line data
-#    hitran_data['tau0'] = tau0
-#    hitran_data['lineflux'] = lineflux
-#    slabdict['moldata'] = hitran_data
 
     return slabdict
 

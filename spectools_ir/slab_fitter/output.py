@@ -100,6 +100,11 @@ def get_samples(chain,burnin):
     
     return samples
 
+def get_lnprob(mysampler,burnin):
+    lnprob=mysmpler.lnprobability[:,burnin:].reshape(-1)
+
+    return lnprob
+
 def _get_partition_function(mydata,temp):
     q=np.zeros(mydata.nlines)
     for myunique_id in mydata.unique_globals:
