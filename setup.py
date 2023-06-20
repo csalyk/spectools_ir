@@ -2,7 +2,7 @@ from setuptools import setup
 setup(
     name = 'spectools-ir',
     packages = ['spectools_ir','spectools_ir.slabspec','spectools_ir.flux_calculator','spectools_ir.utils','spectools_ir.slab_fitter'],
-    version = '1.0.0',
+    version = '1.0.1',
     description = 'Tools for analysis and modeling of IR spectra',
     long_description_content_type="text/markdown",
     long_description=open('README.md').read(),
