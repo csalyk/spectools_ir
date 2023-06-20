@@ -39,10 +39,10 @@ def _convert_quantum_strings(hitran_data_in):
     if(('Vp_HITRAN' in hitran_data.columns) and ('Vup' in hitran_data.columns) and ('Vlow' in hitran_data.columns) and ('Qpp_HITRAN' in hitran_data.columns) and ('molec_id' in hitran_data.columns) ):  
         for i,myvp in enumerate(hitran_data['Vp_HITRAN']):
             if(hitran_data['molec_id'][i]==5):   #Special formatting specific to rovibrational CO
-                hitran_data['Vup'][i]=np.int(myvp)  #Upper level vibrational state
-                hitran_data['Vlow'][i]=np.int(hitran_data['Vpp_HITRAN'][i])   #Lower level vibrational state
+                hitran_data['Vup'][i]=int(myvp)  #Upper level vibrational state
+                hitran_data['Vlow'][i]=int(hitran_data['Vpp_HITRAN'][i])   #Lower level vibrational state
                 type=(hitran_data['Qpp_HITRAN'][i].split())[0]   #Returns P or R  
-                num=np.int((hitran_data['Qpp_HITRAN'][i].split())[1])
+                num=int((hitran_data['Qpp_HITRAN'][i].split())[1])
                 hitran_data['Qlow'][i]=num  #Lower level Rotational state
                 if(type=='P'): 
                     hitran_data['Qup'][i]=num-1  #Upper level Rotational state for P branch
