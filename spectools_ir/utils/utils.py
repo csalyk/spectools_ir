@@ -39,8 +39,6 @@ def make_rotation_diagram(lineparams, units='mks', fluxkey='lineflux'):
 
     x=lineparams['eup_k']
     y=np.log(lineparams[fluxkey]/(lineparams['wn']*1e2*gup*lineparams['a']))   #All mks
-    if ('lineflux_err' in lineparams.columns):
-        dy=lineparams['lineflux_err']/lineparams[fluxkey]
 
     if(units=='cgs'):
         y=np.log(1000.*lineparams[fluxkey]/(lineparams['wn']*gup*lineparams['a'])) #All cgs

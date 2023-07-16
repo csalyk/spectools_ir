@@ -20,7 +20,7 @@ from .helpers import _strip_superfluous_hitran_data, _convert_quantum_strings
 
 #------------------------------------------------------------------------------------
 def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, deltav=None, isotopologue_number=1, d_pc=1,
-              aupmin=None, convol_fwhm=None, eupmax=None, vup=None, swmin=None, parfile=None):
+              aupmin=None, convol_fwhm=None, eupmax=None, vup=None, swmin=None, parfile=None, hitran_data=None):
 
     '''
     Create an IR spectrum for a slab model with given temperature, area, and column density
@@ -56,6 +56,11 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, deltav=None, is
         Maximum energy of transitions to consider, in K
     vup : float, optional
         Optional parameter to restrict output to certain upper level vibrational states.  Only works if 'Vp' field is a single integer.
+    parfile : string
+        HITRAN ".par" file, used in place of the HITRAN API if provided
+    hitran_data : astropy table
+        An astropy table in the same format as output from extract_hitran_data.  Will be used in place of HITRAN API call if provided.
+  
 
     Returns
     --------
@@ -84,10 +89,10 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, deltav=None, is
     if(deltav is None):
         deltav = compute_thermal_velocity(molecule_name, temp)
 
-    #Read HITRAN data
+    #Read HITRAN data, unless already provided
     if(parfile is not None):
         hitran_data = extract_hitran_from_par(parfile,aupmin=aupmin,eupmax=eupmax,isotopologue_number=isotopologue_number,vup=vup,wavemin=wmin,wavemax=wmax)
-    else:  #parfile not provided.  Read using extract_hitran_data
+    elif(hitran_data is None):  #parfile not provided, and hitran_data not provided.  Read using extract_hitran_data
         try:
             hitran_data = extract_hitran_data(molecule_name,wmin,wmax,isotopologue_number=isotopologue_number, eupmax=eupmax, aupmin=aupmin, swmin=swmin, vup=vup)
         except:
@@ -97,7 +102,10 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, deltav=None, is
     wn0 = hitran_data['wn']*1e2 # now m-1
     aup = hitran_data['a']
     eup = (hitran_data['elower']+hitran_data['wn'])*1e2 #now m-1
-    gup = hitran_data['gp']
+    if(not ('gp' in hitran_data.columns)): #Assuming gupper is either labeled gup or gp
+        gup=hitran_data['gup']
+    else:
+        gup = hitran_data['gp']
 
     #Compute partition function
     q = _compute_partition_function(molecule_name,temp,isot)

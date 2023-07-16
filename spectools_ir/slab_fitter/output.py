@@ -13,7 +13,7 @@ from astropy.convolution import Gaussian1DKernel, convolve
 
 from spectools_ir.utils import extract_hitran_data, get_global_identifier, translate_molecule_identifier, get_molmass
 
-def compute_model_fluxes(mydata,samples):
+def compute_model_fluxes(mydata,samples,bestfit=None):
     '''
     Function to compute model fluxes for same lines as in dataset.
 
@@ -30,11 +30,16 @@ def compute_model_fluxes(mydata,samples):
      Array of line fluxes 
     '''
 
-    bestfit_dict=find_best_fit(samples)
-    logn=bestfit_dict['logN']
-    temp=bestfit_dict['T']
-    logomega=bestfit_dict['logOmega']
-
+    if(bestfit is None):
+        bestfit_dict=find_best_fit(samples)
+        logn=bestfit_dict['logN']
+        temp=bestfit_dict['T']
+        logomega=bestfit_dict['logOmega']
+    else:
+        logn=bestfit[0]
+        temp=bestfit[1]
+        logomega=bestfit[2]
+        
     omega=10**logomega
     n_col=10**logn
     si2jy=1e26   #SI to Jy flux conversion factor 
