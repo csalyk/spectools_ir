@@ -1,0 +1,14 @@
+{
+"tmin": 400,
+"tmax": 1300,
+"lognmin": 19,
+"lognmax": 24,
+"logomegamin": -19,
+"logomegamax": -12,
+"Nwalkers": 8,
+"Nburnin": 10,
+"Nsamples": 2000,
+"molecule": "CO",
+"iso": 1,
+"fwhm": 120
+}
