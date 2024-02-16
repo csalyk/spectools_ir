@@ -301,8 +301,8 @@ def get_global_identifier(molecule_name,isotopologue_number=1):
                'CS_1':97,'CS_2':98,'CS_3':99,'CS_4':100,
                'SO3_1':114,
                'C2N2_1':123,
-               'COCl2_1':124,'COCl2_2':125,'SiO_1':200}
- #SiO is not in HITRAN, so I just assigned it 200
+               'COCl2_1':124,'COCl2_2':125,'SiO_1':200,'H2_1':201}
+ #SiO is not in HITRAN, so I just assigned it 200.  H2 is now 201
 
     try:
         return trans[mol_isot_code]
@@ -371,7 +371,7 @@ def _check_hitran(molecule_name):
              'HO2','O','ClONO2','NO+','HOBr','C2H4','CH3OH','CH3Br',
              'CH3CN', 'CF4','C4H2','HC3N','H2','CS','SO3']
 
-    exomol_list=['SiO']
+    exomol_list=['SiO', 'H2']
 
     if(molecule_name in hitran_list):
         return 'HITRAN'
