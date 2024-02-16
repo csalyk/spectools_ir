@@ -73,8 +73,30 @@ class Retrieval():
         self.eup=(hitran_data['elower']+hitran_data['wn'])*1e2 #now m-1 
         self.gup=hitran_data['gp']
         self.eup_k=(hitran_data['elower']+hitran_data['wn'])*1e2*h.value*c.value/k_B.value
-        self.elower=hitran_data['elower']  #Check on units for this
+        self.elower=hitran_data['elower'] 
+        self.molec_id=hitran_data['molec_id']
+        self.nlines = len(hitran_data['elower'])
+        self.local_iso_id=hitran_data['local_iso_id']
+        self.global_id=self._return_global_ids()
+        self.unique_globals = np.unique(self.global_id)
+        self.qdata_dict=self._get_qdata()
+        
+    #Returns HITRAN global IDs for all lines
+    def _return_global_ids(self):
+        global_id = np.array([get_global_identifier(translate_molecule_identifier(self.molec_id[i]), isotopologue_number=self.local_iso_id[i]) for i in np.arange(self.nlines)])
+        return global_id        
 
+    def _get_qdata(self):
+        id_array=self.unique_globals
+        q_dict={}
+        for myid in id_array:
+            qurl='https://hitran.org/data/Q/'+'q'+str(myid)+'.txt'
+            handle = urllib.request.urlopen(qurl)
+            qdata = pd.read_csv(handle,sep=' ',skipinitialspace=True,names=['temp','q'],header=None)
+            print('Reading partition function from: ',qurl)
+            q_dict.update({str(myid):qdata['q']})
+        return q_dict
+    
     def run_emcee(self):
         #Initialize walkers
         lognini = np.random.uniform(self.Config.getpar('lognmin'), self.Config.getpar('lognmax'), self.Config.getpar('Nwalkers')) # initial logn points 
@@ -154,8 +176,7 @@ class Retrieval():
         elower=self.elower
         
 #Compute partition function
-#        q=self._get_partition_function(temp) #Fix later
-        q=1000. #Fix later
+        q=self._get_partition_function(temp) #Fix later
 #Begin calculations
        
         afactor=((aup*gup*n_col)/(q*8.*np.pi*(wn0)**3.)) #mks                                                                 
@@ -224,12 +245,12 @@ class Retrieval():
         return convolflux_interp
 #------------------------------------------------------------------------------
     def _get_partition_function(self,temp):
-    #Loop through each unique identifier
-    #For each unique identifier, assign q values accordingly
-        q=np.zeros(self.LineData.nlines)
-        for myunique_id in self.LineData.unique_globals:
-            myq=self.LineData.qdata_dict[str(myunique_id)][int(temp)-1]  #Look up appropriate q value
-            mybool=(self.LineData.global_id == myunique_id)              #Find where global identifier equals this one
+#Loop through each unique identifier
+#For each unique identifier, assign q values accordingly
+        q=np.zeros(self.nlines)
+        for myunique_id in self.unique_globals:
+            myq=self.qdata_dict[str(myunique_id)][int(temp)-1]  #Look up appropriate q value
+            mybool=(self.global_id == myunique_id)              #Find where global identifier equals this one
             q[mybool]=myq                                      #Assign q values where global identifier equals this one
         return q
 #------------------------------------------------------------------------------------                                     
@@ -245,20 +266,8 @@ class SpecData():
         molmass_arr = np.array([get_molmass(translate_molecule_identifier(self.molec_id[i]), isotopologue_number=self.local_iso_id[i]) for i in np.arange(self.nlines)])
         return molmass_arr
 #---------------------
-    #Returns HITRAN global IDs for all lines
-    def _return_global_ids(self):
-        global_id = np.array([get_global_identifier(translate_molecule_identifier(self.molec_id[i]), isotopologue_number=self.local_iso_id[i]) for i in np.arange(self.nlines)])
-        return global_id
-#------------------------------------------------------------------------------------                                    
-    def _get_qdata(self):
-        id_array=self.unique_globals
-        q_dict={}
-        for myid in id_array:
-            qurl='https://hitran.org/data/Q/'+'q'+str(myid)+'.txt'
-            handle = urllib.request.urlopen(qurl)
-            qdata = pd.read_csv(handle,sep=' ',skipinitialspace=True,names=['temp','q'],header=None)
-            q_dict.update({str(myid):qdata['q']})
-        return q_dict
+
+
 #------------------------------------------------------------------------------------                                     
     def rot_diagram(self,units='mks',modelfluxes=None):
         x=self.eup_k
