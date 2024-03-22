@@ -225,8 +225,7 @@ def _compute_partition_function(molecule_name,temp,isotopologue_number=1):
       The partition function
     '''
 
-    exomol_pf_dict = {200:'https://www.exomol.com/db/SiO/28Si-16O/SiOUVenIR/28Si-16O__SiOUVenIR.pf',
-                      201:'https://www.exomol.com/db/H2/1H2/RACPPK/1H2__RACPPK.pf'}
+    exomol_pf_dict = {200:'https://www.exomol.com/db/SiO/28Si-16O/SiOUVenIR/28Si-16O__SiOUVenIR.pf'}
 
     G = get_global_identifier(molecule_name, isotopologue_number=isotopologue_number)
     if(G<200):  #in HITRAN database
