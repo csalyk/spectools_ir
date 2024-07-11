@@ -20,7 +20,7 @@ from .helpers import _strip_superfluous_hitran_data, _convert_quantum_strings
 
 #------------------------------------------------------------------------------------
 def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, deltav=None, isotopologue_number=1, d_pc=1,
-              aupmin=None, convol_fwhm=None, eupmax=None, vup=None, swmin=None, parfile=None, hitran_data=None):
+              aupmin=None, convol_fwhm=None, eupmax=None, vup=None, swmin=None, parfile=None, hitran_data=None, array_output=False):
 
     '''
     Create an IR spectrum for a slab model with given temperature, area, and column density
@@ -177,19 +177,19 @@ def make_spec(molecule_name, n_col, temp, area, wmax=40, wmin=1, deltav=None, is
     slabdict={}
 
     #Line params
-    hitran_data['lineflux'] = lineflux
-    hitran_data['tau_peak'] = tau0
-    hitran_data['fthin'] = fthin
+    hitran_data['lineflux'] = np.float32(lineflux)
+    hitran_data['tau_peak'] = np.float32(tau0)
+    hitran_data['fthin'] = np.float32(fthin)
     hitran_data = _convert_quantum_strings(hitran_data)
     hitran_data = _strip_superfluous_hitran_data(hitran_data)
     slabdict['lineparams'] = hitran_data
 
     #Line flux array
     lines={'flux_arr':f_arr , 'wave_arr':wave_arr , 'velocity':vel*1e-3}
-    slabdict['lines'] = lines
+    if(array_output==True): slabdict['lines'] = lines
 
     #Spectrum
-    spectrum_table = Table([wave, flux, convolflux, totaltau], names=('wave', 'flux', 'convolflux','totaltau'),  dtype=('f8', 'f8', 'f8','f8'))
+    spectrum_table = Table([wave, flux,convolflux,totaltau], names=('wave', 'flux', 'convolflux','totaltau'),  dtype=('f4', 'f4', 'f4','f4'))
     spectrum_table['wave'].unit = 'micron'
     spectrum_table['flux'].unit = 'Jy'
     spectrum_table['convolflux'].unit = 'Jy'

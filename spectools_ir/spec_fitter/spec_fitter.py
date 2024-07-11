@@ -9,7 +9,7 @@ from scipy.interpolate import interp1d
 import pdb as pdb
 from astropy.io import fits
 from astropy.constants import c,h, k_B, G, M_sun, au, pc, u
-from astropy.table import Table
+from astropy.table import Table, vstack
 from astropy import units as un
 from astropy.convolution import Gaussian1DKernel, convolve
 
@@ -43,7 +43,7 @@ class Config():
         if(config_file is not None):
             with open(config_file, 'r') as file:
                 self.config = json.load(file)
-        self.config['molmass']=get_molmass(self.config['molecule'],isotopologue_number=self.config['iso'])
+        self.config['multi_iso']=isinstance(self.config['iso'], list)
                 
     def getpar(self,name):
         return self.config[name]
@@ -63,11 +63,26 @@ class Retrieval():
         
         self.wmax=np.nanmax(self.SpecData.wave)
         self.wmin=np.nanmin(self.SpecData.wave)
-        try:
-            hitran_data = extract_hitran_data(self.Config.getpar('molecule'),self.wmin,self.wmax,isotopologue_number=self.Config.getpar('iso'))
-        except:
-            print("astroquery call to HITRAN failed. This can happen when your molecule does not have any lines in the requested wavelength region")
-
+        if(self.Config.getpar('multi_iso')): #multiple isotopologues
+            for i,myiso in enumerate(self.Config.getpar('iso')):
+                if(i==0):
+                    try:
+                        hitran_data = extract_hitran_data(self.Config.getpar('molecule'),self.wmin,self.wmax,isotopologue_number=self.Config.getpar('iso')[0])           
+                    except:
+                        print("astroquery call to HITRAN failed. This can happen when your molecule does not have any lines in the requested wavelength region")
+                else:
+                    try:
+                        new_data = extract_hitran_data(self.Config.getpar('molecule'),self.wmin,self.wmax,isotopologue_number=self.Config.getpar('iso')[i])
+                        hitran_data = vstack([hitran_data, new_data])
+                    except:
+                        print("astroquery call to HITRAN failed. This can happen when your molecule does not have any lines in the requested wavelength region")
+            hitran_data.sort(['nu'])
+        else: #single isotopologue
+            try:
+                hitran_data = extract_hitran_data(self.Config.getpar('molecule'),self.wmin,self.wmax,isotopologue_number=self.Config.getpar('iso'))           
+            except:
+                print("astroquery call to HITRAN failed. This can happen when your molecule does not have any lines in the requested wavelength region")
+            
         self.wn0=hitran_data['wn']*1e2 # now m-1  
         self.aup=hitran_data['a']
         self.eup=(hitran_data['elower']+hitran_data['wn'])*1e2 #now m-1 
@@ -80,7 +95,7 @@ class Retrieval():
         self.global_id=self._return_global_ids()
         self.unique_globals = np.unique(self.global_id)
         self.qdata_dict=self._get_qdata()
-        
+        self.molmass=self._return_molmasses()
     #Returns HITRAN global IDs for all lines
     def _return_global_ids(self):
         global_id = np.array([get_global_identifier(translate_molecule_identifier(self.molec_id[i]), isotopologue_number=self.local_iso_id[i]) for i in np.arange(self.nlines)])
@@ -96,6 +111,11 @@ class Retrieval():
             print('Reading partition function from: ',qurl)
             q_dict.update({str(myid):qdata['q']})
         return q_dict
+
+    #Returns HITRAN molecular masses for all lines
+    def _return_molmasses(self):
+        molmass_arr = np.array([get_molmass(translate_molecule_identifier(self.molec_id[i]), isotopologue_number=self.local_iso_id[i]) for i in np.arange(self.nlines)])
+        return molmass_arr
     
     def run_emcee(self):
         #Initialize walkers
@@ -165,7 +185,7 @@ class Retrieval():
 
 #If local velocity field is not given, assume sigma given by thermal velocity
 
-        mu=u.value*self.Config.getpar('molmass')
+        mu=u.value*self.molmass
         deltav=np.sqrt(k_B.value*temp/mu)   #m/s 
 
         wn0=self.wn0
@@ -188,7 +208,7 @@ class Retrieval():
         tau0=afactor*(np.exp(-1.*efactor1)-np.exp(-1.*efactor2))*phia  #Avoids numerical issues at low T
 
         oversamp = 3
-        dvel = deltav/oversamp    #m/s                                                                                      
+        dvel = np.min(deltav)/oversamp    #m/s  #Use lowest velocity of multiple isotopologues to determine sampling
         nvel = 10*oversamp+1 #5 sigma window                                                                                
         vel = (dvel*(np.arange(0,nvel)-(nvel-1)/2))
 
@@ -197,21 +217,22 @@ class Retrieval():
         tau = np.zeros([nlines,nvel])
         wave = np.zeros([nlines,nvel])
         for ha,mytau in enumerate(tau0):
-            tau[ha,:] = tau0[ha]*np.exp(-vel**2./(2.*deltav**2.))
+            tau[ha,:] = tau0[ha]*np.exp(-vel**2./(2.*deltav[ha]**2.))
             wave[ha,:] = 1.e6/wn0[ha]*(1+vel/c.value)
 
 #Now interpolate over wavelength space so that all lines can be added together                                      
         w_arr = wave            #nlines x nvel                                                                              
         f_arr = w_arr-w_arr     #nlines x nvel                                                                              
-        nbins = int(oversamp*(self.wmax-self.wmin)/self.wmax*(c.value/deltav))
+        nbins = int(oversamp*(self.wmax-self.wmin)/self.wmax*(c.value/np.min(deltav)))
 
 #Create arrays to hold full spectrum (optical depth vs. wavelength)                                                 
-        totalwave = np.logspace(np.log10(self.wmin-10*deltav/c.value*self.wmax),np.log10(self.wmax+10*deltav/c.value*self.wmax),nbins) #Extend beyond input wave by 10xdelta_wave
+        totalwave = np.logspace(np.log10(self.wmin-10*np.max(deltav)/c.value*self.wmax),np.log10(self.wmax+10*np.max(deltav)/c.value*self.wmax),nbins) #Extend beyond input wave by 10xdelta_wave
         totaltau = np.zeros(nbins)
 
     #Create array to hold line fluxes (one flux value per line)                                                         
         lineflux = np.zeros(nlines)
         totalwave_index = np.arange(totalwave.size)
+
         index_interp = interp1d(totalwave,totalwave_index)
         for i in range(nlines):
 
@@ -259,13 +280,8 @@ class SpecData():
         self.wave=data['wave'] #microns
         self.flux=data['flux'] #Jy
         self.error=data['error'] #Jy
+#---------------------
 
-#---------------------
-    #Returns HITRAN molecular masses for all lines
-    def _return_molmasses(self):
-        molmass_arr = np.array([get_molmass(translate_molecule_identifier(self.molec_id[i]), isotopologue_number=self.local_iso_id[i]) for i in np.arange(self.nlines)])
-        return molmass_arr
-#---------------------
 
 
 #------------------------------------------------------------------------------------                                     

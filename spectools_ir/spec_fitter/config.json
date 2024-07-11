@@ -7,8 +7,8 @@
 "logomegamax": -12,
 "Nwalkers": 8,
 "Nburnin": 10,
-"Nsamples": 2000,
+"Nsamples": 400,
 "molecule": "CO",
-"iso": 1,
+"iso": [1,2],
 "fwhm": 120
 }
